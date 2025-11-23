@@ -1,0 +1,52 @@
+services:
+  market_backend:
+    container_name: market_backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    restart: always
+
+  postgres:
+    image: postgres:17
+    container_name: market_postgres
+    environment:
+      POSTGRES_USER: market
+      POSTGRES_PASSWORD: market_pass
+      POSTGRES_DB: market_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: market_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # UI
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    volumes:
+      - minio_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  minio_data:
+

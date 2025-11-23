@@ -1,0 +1,14 @@
+package dto
+
+import (
+	"eduVix_backend/internal/common/types"
+	"github.com/google/uuid"
+)
+
+type GetCartItemsResponse struct {
+	ProductId   uuid.UUID         `json:"product_id"`
+	ProductType types.ProductType `json:"product_type"`
+	Quantity    int               `json:"quantity"`
+	ImageUrl    string            `json:"image_url"`
+	Price       float64           `json:"price"`
+}
