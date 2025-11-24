@@ -6,6 +6,7 @@ import (
 )
 
 type GetCartItemsResponse struct {
+	ID          uuid.UUID         `json:"id"`
 	ProductId   uuid.UUID         `json:"product_id"`
 	ProductType types.ProductType `json:"product_type"`
 	Quantity    int               `json:"quantity"`

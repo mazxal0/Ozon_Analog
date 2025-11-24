@@ -11,4 +11,6 @@ func RegisterCartRouter(app *fiber.App, h *handler.CartHandler) {
 
 	cart.Post("/", middleware.AuthRequired(), h.AddNewItem)
 	cart.Get("/:cart_id", middleware.AuthRequired(), h.GetAllCartItems)
+	cart.Delete("/:item_id", middleware.AuthRequired(), h.RemoveItem)
+	cart.Patch("/:item_id", middleware.AuthRequired(), h.ChangeQuantity)
 }

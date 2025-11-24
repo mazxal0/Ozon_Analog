@@ -64,9 +64,13 @@ func (r *CartRepository) AddNewCartItem(cartItem dto.CartItemDto, price float64)
 
 func (r *CartRepository) RemoveCartItem(cartItemId, userId uuid.UUID) error {
 	res := r.db.
-		Joins("JOIN carts ON carts.id = cart_items.cart_id").
-		Where("cart_items.id = ? AND carts.user_id = ?", cartItemId, userId).
-		Delete(&models.CartItem{})
+		Exec(`
+            DELETE FROM cart_items
+            USING carts
+            WHERE cart_items.id = ?
+              AND cart_items.cart_id = carts.id
+              AND carts.user_id = ?
+        `, cartItemId, userId)
 
 	if res.Error != nil {
 		return res.Error
@@ -78,20 +82,23 @@ func (r *CartRepository) RemoveCartItem(cartItemId, userId uuid.UUID) error {
 	return nil
 }
 
-func (r *CartRepository) ChangeCartItem(cartItemId, userId uuid.UUID, quantity int) error {
-	res := r.db.
-		Joins("JOIN carts ON carts.id = cart_items.cart_id").
-		Where("cart_items.id = ? AND carts.user_id = ?", cartItemId, userId).
-		Update("quantity", quantity)
+func (r *CartRepository) ChangeQuantity(cartItemId, userId uuid.UUID, delta int) error {
+	res := r.db.Exec(`
+        WITH updated AS (
+            UPDATE cart_items
+            SET quantity = quantity + ?
+            FROM carts
+            WHERE cart_items.id = ?
+              AND cart_items.cart_id = carts.id
+              AND carts.user_id = ?
+            RETURNING cart_items.id, quantity
+        )
+        DELETE FROM cart_items
+        USING updated
+        WHERE cart_items.id = updated.id AND updated.quantity <= 0;
+    `, delta, cartItemId, userId)
 
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return errors.New("cart item not found or does not belong to user")
-	}
-
-	return nil
+	return res.Error
 }
 
 func (r *CartRepository) GetAllCartItems(userId, cartId uuid.UUID) ([]dto.GetCartItemsResponse, error) {
@@ -152,6 +159,7 @@ func (r *CartRepository) GetAllCartItems(userId, cartId uuid.UUID) ([]dto.GetCar
 
 	for _, ci := range cartItems {
 		resultItems = append(resultItems, dto.GetCartItemsResponse{
+			ID:          ci.ID,
 			ProductId:   ci.ProductID,
 			ProductType: ci.ProductType,
 			Quantity:    ci.Quantity,

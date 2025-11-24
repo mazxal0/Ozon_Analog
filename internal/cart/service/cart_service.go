@@ -43,7 +43,7 @@ func (s *CartService) RemoveItem(cartItemId, userId uuid.UUID) error {
 }
 
 func (s *CartService) ChangeItem(cartItemId, userId uuid.UUID, quantity int) error {
-	return s.repo.ChangeCartItem(cartItemId, userId, quantity)
+	return s.repo.ChangeQuantity(cartItemId, userId, quantity)
 }
 
 func (s *CartService) GetAllCartItems(cartItemId, userId uuid.UUID) ([]dto.GetCartItemsResponse, error) {
