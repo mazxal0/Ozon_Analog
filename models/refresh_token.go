@@ -11,6 +11,8 @@ type RefreshToken struct {
 	TokenHash string    `gorm:"uniqueIndex"`
 	ExpiresAt time.Time
 	CreatedAt time.Time `gorm:"autoCreateTime"`
+
+	User User `gorm:"constraint:OnDelete:CASCADE;"`
 }
 
 //func (r *RefreshToken) BeforeCreate(tx *gorm.DB) error {

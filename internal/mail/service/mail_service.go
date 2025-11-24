@@ -15,7 +15,7 @@ type MailService struct {
 }
 
 func NewMailService() *MailService {
-	return &MailService{Host: "smtp.gmail.com", Port: "587", Email: "makwest5008@gmail.com", Password: "dttuimyddyshtxic", From: "makwest5008@gmail.com"}
+	return &MailService{Host: "smtp.gmail.com", Port: "587", Email: "makwest5008@gmail.com", Password: "dttuimyddyshtxic", From: "LeshMarket@gmail.com"}
 }
 
 func (m *MailService) SendEmail(to, subject, body string) error {

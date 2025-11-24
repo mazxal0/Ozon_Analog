@@ -7,6 +7,7 @@ import (
 	"eduVix_backend/internal/common"
 	"eduVix_backend/internal/common/utils"
 	"fmt"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
@@ -78,8 +79,10 @@ func (s *AuthService) Registration(dto dto.AuthRegister) (string, string, error)
 	// Отправка письма
 	link := fmt.Sprintf("https://yourdomain.com/verify-email?token=%s", emailToken)
 	body := fmt.Sprintf(
-		`<p>Здравствуйте, %s!</p>
-		<p>Перейдите по ссылке, чтобы подтвердить email:</p>
+		`
+		<h1>Gay SHOP</h1>
+		<p>Здравствуйте, %s!</p>
+		<p>Перейдите по ссылке, чтобы подтвердить email и то что вы Гей))))))) АМЕРИКА USA ()()()() BOOBS:</p>
 		<a href="%s">Подтвердить email</a>`,
 		newUser.Name, link,
 	)

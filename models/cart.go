@@ -1,14 +1,15 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Cart struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID    uuid.UUID
-	User      User
+	User      User       `gorm:"constraint:OnDelete:CASCADE;"`
 	Items     []CartItem `gorm:"foreignKey:CartID"`
 	CreatedAt time.Time
 	UpdatedAt time.Time

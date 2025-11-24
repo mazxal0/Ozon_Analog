@@ -24,8 +24,8 @@ type User struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 
-	RefreshToken  *RefreshToken
-	TwoFactorCode *TwoFactorCode
+	RefreshToken  *RefreshToken  `gorm:"constraint:OnDelete:CASCADE;"`
+	TwoFactorCode *TwoFactorCode `gorm:"constraint:OnDelete:CASCADE;"`
 
 	EmailVerified bool
 }
