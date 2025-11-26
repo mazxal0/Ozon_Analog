@@ -2,6 +2,7 @@ package dto
 
 import (
 	"eduVix_backend/internal/common/types"
+	"eduVix_backend/models"
 	"github.com/google/uuid"
 )
 
@@ -12,4 +13,9 @@ type GetCartItemsResponse struct {
 	Quantity    int               `json:"quantity"`
 	ImageUrl    string            `json:"image_url"`
 	Price       float64           `json:"price"`
+}
+
+type CartItemWithProduct struct {
+	CartItem models.CartItem
+	Product  any
 }

@@ -148,3 +148,36 @@ func (h *CartHandler) ChangeQuantity(c *fiber.Ctx) error {
 		"message": fmt.Sprintf("Item with ID = %v changed quantity successfully", itemId),
 	})
 }
+
+func (h *CartHandler) ClearCart(c *fiber.Ctx) error {
+	userId, err := utils.GetUserId(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+
+	cartIdStr := c.Query("cart_id")
+	if cartIdStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "cart_id is required",
+		})
+	}
+	cartId, err := uuid.Parse(cartIdStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+
+	err = h.service.ClearCart(userId, cartId)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Cleared cart",
+	})
+}

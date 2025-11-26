@@ -13,7 +13,7 @@ type Processor struct {
 	RetailPrice        float64 // цена для розницы
 	WholesalePrice     float64 // цена для опта
 	WholesaleMinQty    int     // минимальное количество для опта
-	Stock              int
+	Stock              int     // остаток
 	Line               string
 	Architecture       string
 	Socket             string

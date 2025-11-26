@@ -21,6 +21,11 @@ import (
 	CartRouter "eduVix_backend/internal/cart/router"
 	CartService "eduVix_backend/internal/cart/service"
 
+	OrderHandler "eduVix_backend/internal/order/handler"
+	OrderRepository "eduVix_backend/internal/order/repository"
+	OrderRouter "eduVix_backend/internal/order/router"
+	OrderService "eduVix_backend/internal/order/service"
+
 	"eduVix_backend/internal/storage"
 	"log"
 
@@ -57,6 +62,12 @@ func Start() {
 	authHandler := AuthHandler.NewAuthHandler(authService)
 
 	AuthRouter.RegisterAuthRouter(app, authHandler)
+
+	orderRepo := OrderRepository.NewOrderRepository()
+	orderService := OrderService.NewOrderService(orderRepo, cartRepo, cartService)
+	orderHandler := OrderHandler.NewOrderHandler(orderService)
+
+	OrderRouter.RegisterOrderRouter(app, orderHandler)
 
 	app.Listen(":3000")
 }

@@ -108,6 +108,53 @@ func (r *ProcessorRepository) GetProcessorById(procId uuid.UUID) (*dto.Processor
 	}, nil
 }
 
+func (r *ProcessorRepository) GetProcessorByIdTx(tx *gorm.DB, procId uuid.UUID) (*dto.ProcessorWithImagesDTO, error) {
+	var proc models.Processor
+	if err := tx.Preload("Images").First(&proc, "id = ?", procId).Error; err != nil {
+		return nil, err
+	}
+
+	// собираем URL изображений
+	var urls []string
+	for _, img := range proc.Images {
+		urls = append(urls, img.URL)
+	}
+
+	// возвращаем DTO со всеми полями + ImageURLs
+	return &dto.ProcessorWithImagesDTO{
+		ID:                 proc.ID,
+		SKU:                proc.SKU,
+		Name:               proc.Name,
+		Brand:              proc.Brand,
+		RetailPrice:        proc.RetailPrice,
+		WholesalePrice:     proc.WholesalePrice,
+		WholesaleMinQty:    proc.WholesaleMinQty,
+		Stock:              proc.Stock,
+		Line:               proc.Line,
+		Architecture:       proc.Architecture,
+		Socket:             proc.Socket,
+		BaseFrequency:      proc.BaseFrequency,
+		TurboFrequency:     proc.TurboFrequency,
+		Cores:              proc.Cores,
+		Threads:            proc.Threads,
+		L1Cache:            proc.L1Cache,
+		L2Cache:            proc.L2Cache,
+		L3Cache:            proc.L3Cache,
+		Lithography:        proc.Lithography,
+		TDP:                proc.TDP,
+		Features:           proc.Features,
+		MemoryType:         proc.MemoryType,
+		MaxRAM:             proc.MaxRAM,
+		MaxRAMFrequency:    proc.MaxRAMFrequency,
+		IntegratedGraphics: proc.IntegratedGraphics,
+		GraphicsModel:      proc.GraphicsModel,
+		MaxTemperature:     proc.MaxTemperature,
+		PackageContents:    proc.PackageContents,
+		CountryOfOrigin:    proc.CountryOfOrigin,
+		ImageURLs:          urls,
+	}, nil
+}
+
 func (r *ProcessorRepository) Update(procId uuid.UUID, proc dto.ProcUpdate) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// обновляем только поля Processor, GORM сам определит, какие поля есть
@@ -140,7 +187,7 @@ func (r *ProcessorRepository) Update(procId uuid.UUID, proc dto.ProcUpdate) erro
 			"package_contents":    proc.PackageContents,
 			"country_of_origin":   proc.CountryOfOrigin,
 		}
- 
+
 		res := tx.Model(&models.Processor{}).Where("id = ?", procId).Updates(updateData)
 		if res.Error != nil {
 			return res.Error
