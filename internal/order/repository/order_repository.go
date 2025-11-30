@@ -5,6 +5,7 @@ import (
 	"eduVix_backend/internal/common"
 	"eduVix_backend/internal/common/types"
 	"eduVix_backend/models"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -37,12 +38,20 @@ func (r *OrderRepository) CreateOrderTx(tx *gorm.DB, userId uuid.UUID, status ty
 	return orderId, nil
 }
 
-func (r *OrderRepository) GetOrder(orderId, userId uuid.UUID) (*models.Order, error) {
+func (r *OrderRepository) GetOrderById(orderId, userId uuid.UUID) (*models.Order, error) {
 	var order models.Order
-	if err := r.db.Preload("items.Product").Where("id = ? AND user_id = ?", orderId, userId).First(&order).Error; err != nil {
+	if err := r.db.Preload("Items").Where("id = ? AND user_id = ?", orderId, userId).First(&order).Error; err != nil {
 		return nil, err
 	}
 	return &order, nil
+}
+
+func (r *OrderRepository) GetAllOrders(userId uuid.UUID) ([]models.Order, error) {
+	var orders []models.Order
+	if err := r.db.Find(&orders, "user_id = ?", userId).Error; err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
 
 func (r *OrderRepository) CreateOrderItems(orderId uuid.UUID, createOrderItem []dto.GetCartItemsResponse) error {

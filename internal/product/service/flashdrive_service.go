@@ -1,0 +1,188 @@
+package service
+
+import (
+	"context"
+	"eduVix_backend/internal/common/utils"
+	"eduVix_backend/internal/product/dto"
+	"eduVix_backend/internal/product/repository"
+	"eduVix_backend/internal/storage"
+	"eduVix_backend/models"
+	"fmt"
+	"github.com/google/uuid"
+	"io"
+	"os"
+)
+
+type FlashDriveService struct {
+	repo    *repository.FlashDriveRepository
+	storage *storage.MinioStorage
+}
+
+func NewFlashDriveService(repo *repository.FlashDriveRepository, storage *storage.MinioStorage) *FlashDriveService {
+	return &FlashDriveService{
+		repo:    repo,
+		storage: storage,
+	}
+}
+
+//
+// CREATE
+//
+
+func (s *FlashDriveService) CreateFlashDrive(dto dto.FlashDriveCreateDTO) (*models.FlashDrive, error) {
+	fd := &models.FlashDrive{
+		ID:              uuid.New(),
+		SKU:             utils.GenerateSKU(),
+		Name:            dto.Name,
+		Brand:           dto.Brand,
+		RetailPrice:     dto.RetailPrice,
+		WholesalePrice:  dto.WholesalePrice,
+		WholesaleMinQty: dto.WholesaleMinQty,
+		Stock:           dto.Stock,
+
+		CapacityGB:      dto.CapacityGB,
+		USBInterface:    dto.USBInterface,
+		FormFactor:      dto.FormFactor,
+		ReadSpeed:       dto.ReadSpeed,
+		WriteSpeed:      dto.WriteSpeed,
+		ChipType:        dto.ChipType,
+		OTGSupport:      dto.OTGSupport,
+		BodyMaterial:    dto.BodyMaterial,
+		Color:           dto.Color,
+		WaterResistance: dto.WaterResistance,
+		DustResistance:  dto.DustResistance,
+		Shockproof:      dto.Shockproof,
+		CapType:         dto.CapType,
+
+		LengthMM:    dto.LengthMM,
+		WidthMM:     dto.WidthMM,
+		ThicknessMM: dto.ThicknessMM,
+		WeightG:     dto.WeightG,
+
+		Compatibility:   dto.Compatibility,
+		OperatingTemp:   dto.OperatingTemp,
+		StorageTemp:     dto.StorageTemp,
+		CountryOfOrigin: dto.CountryOfOrigin,
+		PackageContents: dto.PackageContents,
+		WarrantyMonths:  dto.WarrantyMonths,
+		Features:        dto.Features,
+	}
+
+	// сохраняем сам продукт
+	if err := s.repo.CreateFlashDrive(fd); err != nil {
+		return nil, err
+	}
+
+	// загружаем изображения
+	for _, fileHeader := range dto.ImageFiles {
+		file, err := fileHeader.Open()
+		if err != nil {
+			continue
+		}
+		defer file.Close()
+
+		tmpFile, err := os.CreateTemp("", "upload-*")
+		if err != nil {
+			continue
+		}
+		defer os.Remove(tmpFile.Name())
+
+		if _, err := io.Copy(tmpFile, file); err != nil {
+			tmpFile.Close()
+			continue
+		}
+		tmpFile.Close()
+
+		s3Key := fmt.Sprintf("flashdrives/%s/%s", fd.ID, fileHeader.Filename)
+		url, err := s.storage.Upload(context.Background(), s3Key, tmpFile.Name())
+		if err != nil {
+			continue
+		}
+
+		img := &models.Image{
+			ID:           uuid.New(),
+			FlashDriveID: &fd.ID,
+			URL:          url,
+		}
+
+		err = s.repo.CreateImage(img)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return fd, nil
+}
+
+//
+// GET ALL
+//
+
+func (s *FlashDriveService) GetAllFlashDrives(filter dto.FlashDriveFilterDTO) ([]dto.AllFlashDrivesResponseDTO, error) {
+	return s.repo.GetFlashDrivesByFilter(filter)
+}
+
+//
+// GET BY ID
+//
+
+func (s *FlashDriveService) GetFlashDriveById(id uuid.UUID) (*dto.FlashDriveWithImagesDTO, error) {
+	return s.repo.GetFlashDriveById(id)
+}
+
+//
+// DELETE
+//
+
+func (s *FlashDriveService) DeleteFlashDrive(id uuid.UUID) error {
+	return s.repo.DeleteFlashDrive(id)
+}
+
+//
+// UPDATE
+//
+
+func (s *FlashDriveService) UpdateFlashDrive(id uuid.UUID, upd dto.FlashDriveUpdateDTO) error {
+	// обновляем поля в БД через репозиторий
+	if err := s.repo.Update(id, upd); err != nil {
+		return err
+	}
+
+	// загружаем новые изображения
+	for _, fileHeader := range upd.ImageFiles {
+		file, err := fileHeader.Open()
+		if err != nil {
+			continue
+		}
+		defer file.Close()
+
+		tmpFile, err := os.CreateTemp("", "upload-*")
+		if err != nil {
+			continue
+		}
+		defer os.Remove(tmpFile.Name())
+
+		if _, err = io.Copy(tmpFile, file); err != nil {
+			tmpFile.Close()
+			continue
+		}
+		tmpFile.Close()
+
+		s3Key := fmt.Sprintf("flashdrives/%s/%s", id, fileHeader.Filename)
+		url, err := s.storage.Upload(context.Background(), s3Key, tmpFile.Name())
+		if err != nil {
+			continue
+		}
+
+		img := &models.Image{
+			ID:           uuid.New(),
+			FlashDriveID: &id,
+			URL:          url,
+		}
+
+		s.repo.CreateImage(img)
+	}
+
+	return nil
+}

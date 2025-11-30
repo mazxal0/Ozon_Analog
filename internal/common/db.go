@@ -36,6 +36,14 @@ func InitDB() {
         END$$;
     `)
 
+	DB.Exec(`
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+                CREATE TYPE order_status AS ENUM ('in_progress','cancelled','failed','paid','completed');
+            END IF;
+        END$$;
+    `)
+
 	// AutoMigrate всех моделей
 	if err := DB.AutoMigrate(
 		// Пользователи и токены

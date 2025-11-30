@@ -3,8 +3,9 @@ package types
 type OrderStatus string
 
 const (
-	inProgress OrderStatus = "in_progress"
-	paid       OrderStatus = "paid"
-	completed  OrderStatus = "completed"
-	failed     OrderStatus = "failed"
+	InProgress OrderStatus = "in_progress"
+	Paid       OrderStatus = "paid"
+	Completed  OrderStatus = "completed"
+	Failed     OrderStatus = "failed"
+	Cancelled  OrderStatus = "cancelled"
 )

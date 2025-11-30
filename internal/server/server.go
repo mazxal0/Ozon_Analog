@@ -34,16 +34,22 @@ import (
 
 func Start() {
 	app := fiber.New()
-	storage, err := storage.NewMinioStorage()
+	miniStorage, err := storage.NewMinioStorage()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	procRepo := ProductRepository.NewProcessorRepository()
-	procService := ProductService.NewProcessorService(procRepo, storage)
+	procService := ProductService.NewProcessorService(procRepo, miniStorage)
 	procHandler := ProductHandler.NewProcessorHandler(procService)
 
 	ProductRouter.RegisterProcessorRouter(app, procHandler)
+
+	flashdriveRepo := ProductRepository.NewFlashDriveRepository()
+	flashdriveService := ProductService.NewFlashDriveService(flashdriveRepo, miniStorage)
+	flashdriveHandler := ProductHandler.NewFlashDriveHandler(flashdriveService)
+
+	ProductRouter.RegisterFlashDriverRouter(app, flashdriveHandler)
 
 	cartRepo := CartRepository.NewCartRepository()
 	cartService := CartService.NewCartService(cartRepo, procRepo)

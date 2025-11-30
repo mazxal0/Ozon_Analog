@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type FlashDrive struct {
@@ -14,13 +15,36 @@ type FlashDrive struct {
 	WholesalePrice  float64
 	WholesaleMinQty int
 	Stock           int
+
 	CapacityGB      int
-	USBType         string
-	ReadSpeedMB     int
-	WriteSpeedMB    int
-	Features        string
+	USBInterface    string
+	FormFactor      string
+	ReadSpeed       int
+	WriteSpeed      int
+	ChipType        string
+	OTGSupport      bool
+	BodyMaterial    string
+	Color           string
+	WaterResistance bool
+	DustResistance  bool
+	Shockproof      bool
+	CapType         string // <-- ВАЖНО, добавляем!
+
+	LengthMM    float64
+	WidthMM     float64
+	ThicknessMM float64
+	WeightG     float64
+
+	Compatibility   string
+	OperatingTemp   string
+	StorageTemp     string
 	CountryOfOrigin string
-	Images          []Image `gorm:"foreignKey:FlashDriveID"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	PackageContents string
+	WarrantyMonths  int
+	Features        string
+
+	Images []Image `gorm:"foreignKey:FlashDriveID;constraint:OnDelete:CASCADE;"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
