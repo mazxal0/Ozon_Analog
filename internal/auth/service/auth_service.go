@@ -1,20 +1,20 @@
 package service
 
 import (
-	"eduVix_backend/internal/auth"
-	"eduVix_backend/internal/auth/dto"
-	"eduVix_backend/internal/auth/repository"
-	"eduVix_backend/internal/common"
-	"eduVix_backend/internal/common/utils"
+	"Market_backend/internal/auth"
+	"Market_backend/internal/auth/dto"
+	"Market_backend/internal/auth/repository"
+	"Market_backend/internal/common"
+	"Market_backend/internal/common/utils"
 	"fmt"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	CartRepo "eduVix_backend/internal/cart/repository"
-	"eduVix_backend/internal/mail/service"
+	CartRepo "Market_backend/internal/cart/repository"
+	"Market_backend/internal/mail/service"
 
-	"eduVix_backend/models"
+	"Market_backend/models"
 	"errors"
 	"time"
 )

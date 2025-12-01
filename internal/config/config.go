@@ -1,7 +1,7 @@
 package config
 
 import (
-	"eduVix_backend/internal/auth"
+	"Market_backend/internal/auth"
 	"log"
 	"os"
 

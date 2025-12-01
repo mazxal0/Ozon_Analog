@@ -1,12 +1,12 @@
 package service
 
 import (
+	"Market_backend/internal/common/utils"
+	"Market_backend/internal/product/dto"
+	"Market_backend/internal/product/repository"
+	"Market_backend/internal/storage"
+	"Market_backend/models"
 	"context"
-	"eduVix_backend/internal/common/utils"
-	"eduVix_backend/internal/product/dto"
-	"eduVix_backend/internal/product/repository"
-	"eduVix_backend/internal/storage"
-	"eduVix_backend/models"
 	"fmt"
 	"github.com/google/uuid"
 	"io"

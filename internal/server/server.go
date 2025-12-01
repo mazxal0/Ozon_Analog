@@ -1,32 +1,32 @@
 package server
 
 import (
-	AuthHandler "eduVix_backend/internal/auth/handler"
-	AuthRepository "eduVix_backend/internal/auth/repository"
-	AuthRouter "eduVix_backend/internal/auth/router"
-	AuthService "eduVix_backend/internal/auth/service"
+	AuthHandler "Market_backend/internal/auth/handler"
+	AuthRepository "Market_backend/internal/auth/repository"
+	AuthRouter "Market_backend/internal/auth/router"
+	AuthService "Market_backend/internal/auth/service"
 
-	ProductHandler "eduVix_backend/internal/product/handler"
-	ProductRepository "eduVix_backend/internal/product/repository"
-	ProductRouter "eduVix_backend/internal/product/router"
-	ProductService "eduVix_backend/internal/product/service"
+	ProductHandler "Market_backend/internal/product/handler"
+	ProductRepository "Market_backend/internal/product/repository"
+	ProductRouter "Market_backend/internal/product/router"
+	ProductService "Market_backend/internal/product/service"
 
-	UserHandler "eduVix_backend/internal/user/handler"
-	UserRepository "eduVix_backend/internal/user/repository"
-	UserRouter "eduVix_backend/internal/user/router"
-	UserService "eduVix_backend/internal/user/service"
+	UserHandler "Market_backend/internal/user/handler"
+	UserRepository "Market_backend/internal/user/repository"
+	UserRouter "Market_backend/internal/user/router"
+	UserService "Market_backend/internal/user/service"
 
-	CartHandler "eduVix_backend/internal/cart/handler"
-	CartRepository "eduVix_backend/internal/cart/repository"
-	CartRouter "eduVix_backend/internal/cart/router"
-	CartService "eduVix_backend/internal/cart/service"
+	CartHandler "Market_backend/internal/cart/handler"
+	CartRepository "Market_backend/internal/cart/repository"
+	CartRouter "Market_backend/internal/cart/router"
+	CartService "Market_backend/internal/cart/service"
 
-	OrderHandler "eduVix_backend/internal/order/handler"
-	OrderRepository "eduVix_backend/internal/order/repository"
-	OrderRouter "eduVix_backend/internal/order/router"
-	OrderService "eduVix_backend/internal/order/service"
+	OrderHandler "Market_backend/internal/order/handler"
+	OrderRepository "Market_backend/internal/order/repository"
+	OrderRouter "Market_backend/internal/order/router"
+	OrderService "Market_backend/internal/order/service"
 
-	"eduVix_backend/internal/storage"
+	"Market_backend/internal/storage"
 	"log"
 
 	"github.com/gofiber/fiber/v2"

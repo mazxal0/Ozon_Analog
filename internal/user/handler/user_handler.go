@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"eduVix_backend/internal/common/utils"
-	"eduVix_backend/internal/user/service"
+	"Market_backend/internal/common/utils"
+	"Market_backend/internal/user/service"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,7 +18,7 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 	return h.GetAllUsers(c)
 }
- 
+
 func (h *UserHandler) GetMe(c *fiber.Ctx) error {
 	userID, err := utils.GetUserId(c)
 	if err != nil {

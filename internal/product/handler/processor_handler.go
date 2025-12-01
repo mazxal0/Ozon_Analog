@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"eduVix_backend/internal/common/utils"
-	"eduVix_backend/internal/product/dto"
-	"eduVix_backend/internal/product/service"
+	"Market_backend/internal/common/utils"
+	"Market_backend/internal/product/dto"
+	"Market_backend/internal/product/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"mime/multipart"

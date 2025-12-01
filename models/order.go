@@ -1,7 +1,7 @@
 package models
 
 import (
-	"eduVix_backend/internal/common/types"
+	"Market_backend/internal/common/types"
 	"time"
 
 	"github.com/google/uuid"

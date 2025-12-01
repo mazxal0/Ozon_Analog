@@ -1,4 +1,4 @@
-module eduVix_backend
+module Market_backend
 
 go 1.24.0
 

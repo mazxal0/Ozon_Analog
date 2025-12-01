@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"eduVix_backend/internal/auth/dto"
-	"eduVix_backend/internal/auth/service"
+	"Market_backend/internal/auth/dto"
+	"Market_backend/internal/auth/service"
 
 	"github.com/gofiber/fiber/v2"
 )

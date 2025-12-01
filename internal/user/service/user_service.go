@@ -1,8 +1,8 @@
 package service
 
 import (
-	"eduVix_backend/internal/user/repository"
-	"eduVix_backend/models"
+	"Market_backend/internal/user/repository"
+	"Market_backend/models"
 
 	"github.com/google/uuid"
 )

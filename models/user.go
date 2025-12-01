@@ -1,14 +1,14 @@
 package models
 
 import (
-	"eduVix_backend/internal/common/validate"
+	"Market_backend/internal/common/validate"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"eduVix_backend/internal/common/types"
+	"Market_backend/internal/common/types"
 )
 
 type User struct {

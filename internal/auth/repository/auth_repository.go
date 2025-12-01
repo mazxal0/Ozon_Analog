@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"eduVix_backend/internal/common"
-	"eduVix_backend/models"
+	"Market_backend/internal/common"
+	"Market_backend/models"
 	"errors"
 	"time"
 

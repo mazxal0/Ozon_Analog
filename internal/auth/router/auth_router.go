@@ -1,7 +1,7 @@
 package router
 
 import (
-	"eduVix_backend/internal/auth/handler"
+	"Market_backend/internal/auth/handler"
 
 	"github.com/gofiber/fiber/v2"
 )

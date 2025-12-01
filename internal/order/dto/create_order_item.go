@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"eduVix_backend/internal/common/types"
+	"Market_backend/internal/common/types"
 	"github.com/google/uuid"
 )
 

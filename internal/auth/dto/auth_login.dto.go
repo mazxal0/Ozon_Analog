@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"eduVix_backend/internal/common/validate"
+	"Market_backend/internal/common/validate"
 )
 
 type AuthLogin struct {

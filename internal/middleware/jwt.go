@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"eduVix_backend/internal/auth"
+	"Market_backend/internal/auth"
 	"github.com/gofiber/fiber/v2"
 	"strings"
 )
@@ -28,7 +28,7 @@ func AuthRequired() fiber.Handler {
 
 		c.Locals("userId", claims.UserID)
 		c.Locals("role", claims.Role)
-		
+
 		return c.Next()
 	}
 }

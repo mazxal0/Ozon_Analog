@@ -1,10 +1,10 @@
 package main
 
 import (
-	"eduVix_backend/internal/common"
-	"eduVix_backend/internal/common/validate"
-	"eduVix_backend/internal/config"
-	"eduVix_backend/internal/server"
+	"Market_backend/internal/common"
+	"Market_backend/internal/common/validate"
+	"Market_backend/internal/config"
+	"Market_backend/internal/server"
 )
 
 func main() {

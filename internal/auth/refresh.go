@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"Market_backend/models"
 	"crypto/rand"
 	"crypto/sha256"
-	"eduVix_backend/models"
 	"encoding/hex"
 	"errors"
 	"gorm.io/gorm"

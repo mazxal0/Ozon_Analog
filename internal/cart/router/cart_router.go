@@ -1,8 +1,8 @@
 package router
 
 import (
-	"eduVix_backend/internal/cart/handler"
-	"eduVix_backend/internal/middleware"
+	"Market_backend/internal/cart/handler"
+	"Market_backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 

@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"eduVix_backend/internal/cart/dto"
-	"eduVix_backend/internal/cart/service"
-	"eduVix_backend/internal/common/utils"
+	"Market_backend/internal/cart/dto"
+	"Market_backend/internal/cart/service"
+	"Market_backend/internal/common/utils"
 	"fmt"
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"strconv"
 )
 
 type CartHandler struct {

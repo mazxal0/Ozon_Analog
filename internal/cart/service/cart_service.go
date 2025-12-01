@@ -1,11 +1,11 @@
 package service
 
 import (
-	"eduVix_backend/internal/cart/dto"
-	"eduVix_backend/internal/cart/repository"
-	"eduVix_backend/internal/common/types"
-	ProductRepo "eduVix_backend/internal/product/repository"
-	"eduVix_backend/models"
+	"Market_backend/internal/cart/dto"
+	"Market_backend/internal/cart/repository"
+	"Market_backend/internal/common/types"
+	ProductRepo "Market_backend/internal/product/repository"
+	"Market_backend/models"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"

@@ -1,11 +1,11 @@
 package service
 
 import (
-	CartRepository "eduVix_backend/internal/cart/repository"
-	CartService "eduVix_backend/internal/cart/service"
-	"eduVix_backend/internal/common/types"
-	"eduVix_backend/internal/order/repository"
-	"eduVix_backend/models"
+	CartRepository "Market_backend/internal/cart/repository"
+	CartService "Market_backend/internal/cart/service"
+	"Market_backend/internal/common/types"
+	"Market_backend/internal/order/repository"
+	"Market_backend/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"eduVix_backend/internal/common/types"
+	"Market_backend/internal/common/types"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,7 +14,7 @@ type OrderItem struct {
 
 	ProductID   uuid.UUID         `gorm:"type:uuid;not null"`
 	ProductType types.ProductType `gorm:"type:product_type;not null"`
-	
+
 	Quantity  int
 	UnitPrice float64 // цена за единицу на момент заказа (опт или розница)
 	CreatedAt time.Time

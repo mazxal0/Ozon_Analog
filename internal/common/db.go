@@ -1,8 +1,8 @@
 package common
 
 import (
-	"eduVix_backend/internal/config"
-	"eduVix_backend/models"
+	"Market_backend/internal/config"
+	"Market_backend/models"
 	"log"
 
 	"gorm.io/driver/postgres"
