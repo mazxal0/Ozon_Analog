@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"Market_backend/internal/config"
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
@@ -15,7 +16,13 @@ type MailService struct {
 }
 
 func NewMailService() *MailService {
-	return &MailService{Host: "smtp.gmail.com", Port: "587", Email: "makwest5008@gmail.com", Password: "dttuimyddyshtxic", From: "LeshMarket@gmail.com"}
+	return &MailService{
+		Host:     config.SMTPHost,
+		Port:     config.SMTPPort,
+		Email:    config.SMTPEmail,
+		Password: config.SMTPPassword,
+		From:     config.SMTPEmail, // если from = тот же email
+	}
 }
 
 func (m *MailService) SendEmail(to, subject, body string) error {

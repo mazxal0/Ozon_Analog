@@ -4,6 +4,7 @@ import (
 	"Market_backend/internal/auth"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -13,6 +14,26 @@ type Config struct {
 }
 
 var Cfg Config
+var AllowedOrigins []string
+
+var (
+	AppPort string
+
+	RedisHost string
+	RedisPort string
+
+	SMTPHost     string
+	SMTPPort     string
+	SMTPEmail    string
+	SMTPPassword string
+
+	S3Endpoint  string
+	S3Host      string
+	S3AccessKey string
+	S3SecretKey string
+	S3Bucket    string
+	S3UseSSL    string
+)
 
 func Init() {
 	// Загружаем .env файл
@@ -30,4 +51,20 @@ func Init() {
 	auth.InitJwt(secret)
 
 	Cfg.DBUrl = dbUrl
+
+	AllowedOrigins = strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+
+	SMTPHost = os.Getenv("SMTP_HOST")
+	SMTPPort = os.Getenv("SMTP_PORT")
+	SMTPEmail = os.Getenv("SMTP_EMAIL")
+	SMTPPassword = os.Getenv("SMTP_PASSWORD")
+
+	S3Endpoint = os.Getenv("S3_ENDPOINT")
+	S3Host = os.Getenv("S3_HOST")
+	S3AccessKey = os.Getenv("S3_ACCESS_KEY")
+	S3SecretKey = os.Getenv("S3_SECRET_KEY")
+	S3Bucket = os.Getenv("S3_BUCKET")
+	S3UseSSL = os.Getenv("S3_USE_SSL")
+
+	AppPort = os.Getenv("APP_PORT")
 }

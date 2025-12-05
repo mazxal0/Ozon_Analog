@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"Market_backend/internal/config"
 	"context"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -13,7 +14,7 @@ type MinioStorage struct {
 }
 
 func NewMinioStorage() (*MinioStorage, error) {
-	client, err := minio.New("localhost:9000", &minio.Options{
+	client, err := minio.New(config.S3Host, &minio.Options{
 		Creds:  credentials.NewStaticV4("minio", "minio123", ""),
 		Secure: false,
 	})
@@ -24,7 +25,7 @@ func NewMinioStorage() (*MinioStorage, error) {
 	storage := &MinioStorage{
 		Client:   client,
 		Bucket:   "products",
-		Endpoint: "http://localhost:9000",
+		Endpoint: config.S3Endpoint,
 	}
 
 	ctx := context.Background()

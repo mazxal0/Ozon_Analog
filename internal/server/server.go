@@ -29,6 +29,10 @@ import (
 	"Market_backend/internal/storage"
 	"log"
 
+	"Market_backend/internal/config"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -38,6 +42,13 @@ func Start() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
+	}))
 
 	procRepo := ProductRepository.NewProcessorRepository()
 	procService := ProductService.NewProcessorService(procRepo, miniStorage)
@@ -75,5 +86,12 @@ func Start() {
 
 	OrderRouter.RegisterOrderRouter(app, orderHandler)
 
-	app.Listen(":3000")
+	if config.AppPort != "" {
+		err = app.Listen(":" + config.AppPort)
+	} else {
+		err = app.Listen(":3000")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
 }
