@@ -46,13 +46,7 @@ func (r *UserRepository) GetAllUsers() ([]models.User, error) {
 func (r *UserRepository) GetMe(userId uuid.UUID) (*models.User, error) {
 	var user models.User
 
-	err := r.db.Preload("TutorProfile").
-		Preload("TutorProfile.TutorSubjects").
-		//Preload("TutorProfile.TutorSubjects.Subject").
-		Preload("TutorProfile.TutorSubjects.Subject", func(db *gorm.DB) *gorm.DB {
-			return db.Select("subjects.id, subjects.name")
-		}).
-		First(&user, "users.id = ?", userId).Error
+	err := r.db.First(&user, "users.id = ?", userId).Error
 	if err != nil {
 		return nil, err
 	}
