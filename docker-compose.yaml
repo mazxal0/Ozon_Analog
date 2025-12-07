@@ -1,64 +1,139 @@
+version: '3.8'
+
 services:
+  # ===== BACKEND API =====
   market_backend:
     container_name: market_backend
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8080:8080"  # API
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - market_lesh
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
+  # ===== DATABASE =====
   postgres:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: market_postgres
     environment:
       POSTGRES_USER: market
       POSTGRES_PASSWORD: market_pass
       POSTGRES_DB: market_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
     ports:
-      - "5432:5432"
+      - "5432:5432"  # Для подключения с хоста
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  # Опционально
     networks:
       - market_lesh
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U market -d market_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  # ===== DATABASE ADMIN PANEL =====
+  adminer:
+    image: adminer:latest
+    container_name: market_adminer
+    ports:
+      - "8081:8080"  # Adminer на порту 8081
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: nette  # Дизайн: nette, price, pepa-linha
+      ADMINER_PLUGINS: tables-filter tinymce  # Плагины
+    depends_on:
+      - postgres
+    networks:
+      - market_lesh
+    restart: unless-stopped
+
+  # ===== REDIS =====
   redis:
     image: redis:7-alpine
     container_name: market_redis
     ports:
       - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     networks:
       - market_lesh
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
+  # ===== FILE STORAGE =====
   minio:
     image: minio/minio
+    container_name: market_minio
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"   # API
-      - "9001:9001"   # UI
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web UI
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
+      MINIO_DOMAIN: minio.local
     volumes:
       - minio_data:/data
     networks:
       - market_lesh
-    restart: always
+    restart: unless-stopped
+
+  # ===== MINIO BUCKET INITIALIZER =====
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_started
+    networks:
+      - market_lesh
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for Minio...';
+      sleep 15;
+      /usr/bin/mc alias set myminio http://minio:9000 minio minio123;
+      /usr/bin/mc mb myminio/processors || true;
+      /usr/bin/mc mb myminio/users || true;
+      /usr/bin/mc mb myminio/products || true;
+      echo 'Minio buckets initialized';
+      "
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
   minio_data:
+    driver: local
 
 networks:
   market_lesh:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

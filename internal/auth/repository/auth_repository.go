@@ -78,11 +78,11 @@ func (r *AuthRepository) CreateEmailToken(token *models.EmailConfirmation) error
 	return r.db.Create(token).Error
 }
 
-// 1️⃣ Получаем токен подтверждения, который действителен
-func (r *AuthRepository) GetValidEmailToken(tokenStr string) (*models.EmailConfirmation, error) {
+func (r *AuthRepository) GetValidEmailCode(code, email string) (*models.EmailConfirmation, error) {
 	var token models.EmailConfirmation
 	err := r.db.Preload("User").
-		Where("token = ? AND used = false AND expires_at > ?", tokenStr, time.Now()).
+		Joins("JOIN users ON users.id = email_confirmations.user_id").
+		Where("email_confirmations.code = ? AND users.email = ? AND email_confirmations.used = false AND email_confirmations.expires_at > ?", code, email, time.Now()).
 		First(&token).Error
 	if err != nil {
 		return nil, err
@@ -96,6 +96,6 @@ func (r *AuthRepository) VerifyEmail(userID uuid.UUID) error {
 }
 
 // 3️⃣ Помечаем токен как использованный
-func (r *AuthRepository) MarkTokenUsed(tokenID uuid.UUID) error {
-	return r.db.Model(&models.EmailConfirmation{}).Where("id = ?", tokenID).Update("used", true).Error
+func (r *AuthRepository) MarkCodeUsed(codeID uuid.UUID) error {
+	return r.db.Model(&models.EmailConfirmation{}).Where("id = ?", codeID).Update("used", true).Error
 }

@@ -21,26 +21,15 @@ func (handler *AuthHandler) Login(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	access, refresh, err := handler.service.Login(body)
-
-	if err != nil {
+	// Токены не возвращаем, только проверка пароля + отправка кода на email
+	if err := handler.service.Login(body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    refresh,
-		HTTPOnly: true,
-		Secure:   false, // включи если HTTPS
-		SameSite: "Strict",
-		Path:     "/auth/",
-		MaxAge:   30 * 24 * 60 * 60,
-	})
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"access_token": access,
-		"message":      "user login successfully",
+		"message": "login code sent to your email",
 	})
 }
 
@@ -51,27 +40,15 @@ func (handler *AuthHandler) Register(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	access, refresh, err := handler.service.Registration(req)
-
-	if err != nil {
+	// Токены не возвращаем, только регистрация + отправка кода
+	if err := handler.service.Registration(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    refresh,
-		HTTPOnly: true,
-		Secure:   false, // включи если HTTPS
-		SameSite: "Strict",
-		Path:     "/auth/",
-		MaxAge:   30 * 24 * 60 * 60,
-	})
-
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"access_token": access,
-		"message":      "user registered successfully",
+		"message": "confirmation code sent to your email",
 	})
 }
 
@@ -139,15 +116,37 @@ func (handler *AuthHandler) Logout(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
-	token := c.Query("token")
-	if token == "" {
-		return c.Status(400).SendString("Missing token")
+func (handler *AuthHandler) ConfirmCode(c *fiber.Ctx) error {
+	type ConfirmDTO struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
 	}
 
-	if err := h.service.ConfirmEmail(token); err != nil {
-		return c.Status(400).SendString(err.Error())
+	var dto ConfirmDTO
+	if err := c.BodyParser(&dto); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	return c.SendString("Email verified successfully!")
+	access, refresh, err := handler.service.ConfirmCode(dto.Code, dto.Email)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	// Ставим cookie для refresh token
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refresh,
+		HTTPOnly: true,
+		Secure:   false, // включи если HTTPS
+		SameSite: "Strict",
+		Path:     "/auth/",
+		MaxAge:   30 * 24 * 60 * 60,
+	})
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"access_token": access,
+		"message":      "user authenticated successfully",
+	})
 }

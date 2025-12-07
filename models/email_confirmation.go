@@ -11,9 +11,9 @@ type EmailConfirmation struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID    uuid.UUID
 	User      User
-	Token     string    `gorm:"uniqueIndex"` // уникальный токен
-	ExpiresAt time.Time // время действия токена
-	Used      bool      // был ли использован
+	Code      string    `gorm:"size:6;not null"` // ✅ 6-значный код
+	ExpiresAt time.Time // ✅ время жизни кода
+	Used      bool      // ✅ использован или нет
 	CreatedAt time.Time
 }
 

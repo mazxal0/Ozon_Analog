@@ -8,7 +8,6 @@ import (
 	"Market_backend/internal/common/utils"
 	"fmt"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	CartRepo "Market_backend/internal/cart/repository"
@@ -29,23 +28,24 @@ func NewAuthService(repo *repository.AuthRepository, cartRepo *CartRepo.CartRepo
 	return &AuthService{repo: repo, cartRepo: cartRepo, mailSender: mail.NewMailService()}
 }
 
-func (s *AuthService) Registration(dto dto.AuthRegister) (string, string, error) {
+func (s *AuthService) Registration(dto dto.AuthRegister) error {
 	if err := dto.Validate(); err != nil {
-		return "", "", err
+		return err
 	}
 	if dto.Password != dto.RepeatPassword {
-		return "", "", errors.New("passwords do not match")
+		return errors.New("passwords do not match")
 	}
 
 	user, err := s.repo.GetUserByEmail(dto.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return "", "", err
+		return err
 	}
 	if user != nil {
-		return "", "", errors.New("user already exists")
+		return errors.New("user already exists")
 	}
 
 	hashPassword, _ := utils.HashPassword(dto.Password)
+
 	newUser := &models.User{
 		Email:         dto.Email,
 		Name:          dto.Name,
@@ -58,105 +58,111 @@ func (s *AuthService) Registration(dto dto.AuthRegister) (string, string, error)
 	}
 
 	if err := s.repo.CreateUser(newUser); err != nil {
-		return "", "", err
-	}
-	if err := s.cartRepo.CreateCart(newUser.ID); err != nil {
-		return "", "", err
+		return err
 	}
 
-	// Генерация токена подтверждения email
-	emailToken := uuid.New().String()
+	if err := s.cartRepo.CreateCart(newUser.ID); err != nil {
+		return err
+	}
+
+	// ✅ Генерация 6-значного кода
+	emailCode := utils.GenerateSixDigitCode()
+
 	confirmation := &models.EmailConfirmation{
 		UserID:    newUser.ID,
-		Token:     emailToken,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		Code:      emailCode,
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+		Used:      false,
 	}
 
 	if err := s.repo.CreateEmailToken(confirmation); err != nil {
-		return "", "", err
+		return err
 	}
 
-	// Отправка письма
-	link := fmt.Sprintf("https://yourdomain.com/verify-email?token=%s", emailToken)
-	body := fmt.Sprintf(
-		`
-		<h1>Gay SHOP</h1>
-		<p>Здравствуйте, %s!</p>
-		<p>Перейдите по ссылке, чтобы подтвердить email и то что вы Гей))))))) АМЕРИКА USA ()()()() BOOBS:</p>
-		<a href="%s">Подтвердить email</a>`,
-		newUser.Name, link,
+	// ✅ Отправка письма ТОЛЬКО С КОДОМ
+	body := fmt.Sprintf(`
+<h1>Market</h1>
+<p>Здравствуйте, %s!</p>
+<p>Ваш код подтверждения:</p>
+<h2>%s</h2>
+<p>Код действует 10 минут.</p>
+`,
+		newUser.Name,
+		emailCode,
 	)
 
-	if err := s.mailSender.SendEmail(newUser.Email, "Подтвердите почту", body); err != nil {
-		return "", "", err
+	if err := s.mailSender.SendEmail(
+		newUser.Email,
+		"Подтвердите почту",
+		body,
+	); err != nil {
+		return err
 	}
 
-	// Генерация JWT и refresh token
-	access, err := auth.GenerateToken(newUser.ID.String(), string(newUser.Role))
-	if err != nil {
-		return "", "", err
-	}
-
-	refreshToken, err := auth.GenerateRefreshToken()
-	if err != nil {
-		return "", "", err
-	}
-
-	err = s.repo.CreateRefreshToken(&models.RefreshToken{
-		UserID:    newUser.ID,
-		TokenHash: refreshToken.TokenHash,
-		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
-	})
-	if err != nil {
-		return "", "", err
-	}
-
-	return access, refreshToken.Token, nil
+	// ✅ НИЧЕГО НЕ ВОЗВРАЩАЕМ, КРОМЕ УСПЕХА
+	return nil
 }
 
-func (s *AuthService) Login(dto dto.AuthLogin) (string, string, error) {
+func (s *AuthService) Login(dto dto.AuthLogin) error {
 	if err := dto.Validate(); err != nil {
-		return "", "", err
+		return err
 	}
 
 	user, err := s.repo.GetUserByEmail(dto.Email)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	if user == nil {
-		return "", "", errors.New("user does not exist")
+		return errors.New("user does not exist")
 	}
 
-	isCheck := utils.CheckPasswordHash(dto.Password, user.PasswordHash)
-
-	if !isCheck {
-		return "", "", errors.New("invalid user data")
+	// ✅ Почта уже должна быть подтверждена
+	if user.EmailVerified == false {
+		return errors.New("email is not verified")
 	}
 
-	access, err := auth.GenerateToken(user.ID.String(), string(user.Role))
-
-	if err != nil {
-		return "", "", err
+	// ✅ Проверка пароля
+	if !utils.CheckPasswordHash(dto.Password, user.PasswordHash) {
+		return errors.New("invalid user data")
 	}
 
-	refreshToken, err := auth.GenerateRefreshToken()
+	// ✅ Генерируем код для ВХОДА
+	loginCode := utils.GenerateSixDigitCode()
 
-	if err != nil {
-		return "", "", err
-	}
-
-	err = s.repo.UpdateRefreshToken(&models.RefreshToken{
+	confirmation := &models.EmailConfirmation{
 		UserID:    user.ID,
-		TokenHash: refreshToken.TokenHash,
-		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
-	})
-
-	if err != nil {
-		return "", "", err
+		Code:      loginCode,
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+		Used:      false,
 	}
 
-	return access, refreshToken.Token, nil
+	if err := s.repo.CreateEmailToken(confirmation); err != nil {
+		return err
+	}
+
+	// ✅ Отправляем код на почту
+	body := fmt.Sprintf(`
+<h1>Market</h1>
+<p>Здравствуйте, %s!</p>
+<p>Код для входа:</p>
+<h2>%s</h2>
+<p>Код действует 10 минут.</p>
+`,
+		user.Name,
+		loginCode,
+	)
+
+	if err := s.mailSender.SendEmail(
+		user.Email,
+		"Код для входа",
+		body,
+	); err != nil {
+		return err
+	}
+
+	// ✅ ТУТ НЕТ ТОКЕНОВ!
+	return nil
 }
 
 func (s *AuthService) Logout(token string) error {
@@ -203,15 +209,57 @@ func (s *AuthService) RefreshToken(token string) (string, string, error) {
 	return accessToken, newRefreshToken.Token, nil
 }
 
-func (s *AuthService) ConfirmEmail(token string) error {
-	confirmation, err := s.repo.GetValidEmailToken(token)
+func (s *AuthService) ConfirmCode(code, email string) (string, string, error) {
+	confirmation, err := s.repo.GetValidEmailCode(code, email)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	if err := s.repo.VerifyEmail(confirmation.UserID); err != nil {
-		return err
+	user, err := s.repo.GetUserByID(confirmation.UserID)
+	if err != nil {
+		return "", "", err
 	}
 
-	return s.repo.MarkTokenUsed(confirmation.ID)
+	// Если email не подтверждён — это регистрация
+	if !user.EmailVerified {
+		if err := s.repo.VerifyEmail(user.ID); err != nil {
+			return "", "", err
+		}
+	}
+
+	// Помечаем код как использованный
+	if err := s.repo.MarkCodeUsed(confirmation.ID); err != nil {
+		return "", "", err
+	}
+
+	// Генерируем токены
+	access, refreshToken, err := s.issueTokens(user)
+	if err != nil {
+		return "", "", err
+	}
+
+	return access, refreshToken, nil
+}
+
+func (s *AuthService) issueTokens(user *models.User) (string, string, error) {
+	access, err := auth.GenerateToken(user.ID.String(), string(user.Role))
+	if err != nil {
+		return "", "", err
+	}
+
+	refreshToken, err := auth.GenerateRefreshToken()
+	if err != nil {
+		return "", "", err
+	}
+
+	err = s.repo.UpdateRefreshToken(&models.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: refreshToken.TokenHash,
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	return access, refreshToken.Token, nil
 }

@@ -2,11 +2,9 @@ package config
 
 import (
 	"Market_backend/internal/auth"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
-	"strings"
-
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -14,7 +12,7 @@ type Config struct {
 }
 
 var Cfg Config
-var AllowedOrigins []string
+var AllowedOrigins string
 
 var (
 	AppPort string
@@ -52,7 +50,7 @@ func Init() {
 
 	Cfg.DBUrl = dbUrl
 
-	AllowedOrigins = strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	AllowedOrigins = os.Getenv("ALLOWED_ORIGINS")
 
 	SMTPHost = os.Getenv("SMTP_HOST")
 	SMTPPort = os.Getenv("SMTP_PORT")

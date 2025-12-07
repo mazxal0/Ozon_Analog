@@ -16,5 +16,5 @@ func RegisterAuthRouter(app *fiber.App, h *handler.AuthHandler) {
 
 	// Новый маршрут для подтверждения email
 	// Пользователь кликает по ссылке из письма: /auth/verify-email?token=...
-	auth.Get("/verify-email", h.VerifyEmail)
+	auth.Post("/verify-email", h.ConfirmCode)
 }

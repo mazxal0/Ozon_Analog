@@ -30,10 +30,8 @@ import (
 	"log"
 
 	"Market_backend/internal/config"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"strings"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func Start() {
@@ -44,10 +42,11 @@ func Start() {
 	}
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
-		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+		AllowOrigins:     config.AllowedOrigins, // Обрати внимание на запятую и пробел
+		AllowMethods:     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
+		ExposeHeaders:    "Set-Cookie", // Важно для cookies!
 	}))
 
 	procRepo := ProductRepository.NewProcessorRepository()
