@@ -13,7 +13,7 @@ func RegisterFlashDriverRouter(app *fiber.App, h *handler.FlashDriveHandler) {
 	fd.Post("/", middleware.AuthRequired(), h.CreateFlashDrive)
 	fd.Delete("/:flashId", middleware.AuthRequired(), h.DeleteFlashDrive)
 
-	fd.Get("/", middleware.AuthRequired(), h.GetAllFlashDrives)
-	fd.Get("/:flashId", middleware.AuthRequired(), h.GetFlashDriveById)
+	fd.Get("/", h.GetAllFlashDrives)
+	fd.Get("/:flashId", h.GetFlashDriveById)
 	fd.Patch("/:flashId", middleware.AuthRequired(), h.UpdateFlashDrive)
 }

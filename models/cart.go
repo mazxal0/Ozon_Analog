@@ -7,9 +7,8 @@ import (
 )
 
 type Cart struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID    uuid.UUID
-	User      User       `gorm:"constraint:OnDelete:CASCADE;"`
+	ID        uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID    uuid.UUID  `gorm:"type:uuid;uniqueIndex;not null"`
 	Items     []CartItem `gorm:"foreignKey:CartID"`
 	CreatedAt time.Time
 	UpdatedAt time.Time

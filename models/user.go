@@ -2,7 +2,6 @@ package models
 
 import (
 	"Market_backend/internal/common/validate"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,22 +11,24 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Name         string         `validate:"required,max=50,min=2"`
-	Surname      string         `validate:"required,max=50,min=2"`
-	LastName     string         `validate:"required,max=50,min=2"`
-	Email        string         `gorm:"uniqueIndex" validate:"required,email"`
-	PasswordHash string         `validate:"required,password"`
-	Number       string         `validate:"omitempty,number"`
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name         string
+	Surname      string
+	LastName     string
+	Email        string `gorm:"uniqueIndex"`
+	PasswordHash string
+	Number       string
 	Role         types.UserRole `gorm:"type:user_role;default:'user'"`
 	AvatarURL    string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+
+	CartID uuid.UUID `gorm:"type:uuid;not null;unique"`
 
 	RefreshToken  *RefreshToken  `gorm:"constraint:OnDelete:CASCADE;"`
 	TwoFactorCode *TwoFactorCode `gorm:"constraint:OnDelete:CASCADE;"`
 
 	EmailVerified bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
@@ -36,7 +37,6 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	}
 
 	if err := u.Validate(); err != nil {
-		fmt.Println("Validation error:", err)
 		return err
 	}
 

@@ -21,6 +21,10 @@ func NewAuthRepository() *AuthRepository {
 	}
 }
 
+func (r *AuthRepository) DB() *gorm.DB {
+	return r.db
+}
+
 func (r *AuthRepository) CreateRefreshToken(token *models.RefreshToken) error {
 	return r.db.Create(token).Error
 }
@@ -98,4 +102,10 @@ func (r *AuthRepository) VerifyEmail(userID uuid.UUID) error {
 // 3️⃣ Помечаем токен как использованный
 func (r *AuthRepository) MarkCodeUsed(codeID uuid.UUID) error {
 	return r.db.Model(&models.EmailConfirmation{}).Where("id = ?", codeID).Update("used", true).Error
+}
+
+func (r *AuthRepository) UpdateUserCartID(userID, cartID uuid.UUID) error {
+	return r.db.Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("cart_id", cartID).Error
 }

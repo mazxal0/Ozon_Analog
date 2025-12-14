@@ -15,4 +15,7 @@ func RegisterUserRoutes(app *fiber.App, h *handler.UserHandler) {
 
 	// GET /users/me
 	user.Get("/me", middleware.AuthRequired(), h.GetMe)
+
+	// Post /users/me
+	user.Post("/me", middleware.AuthRequired(), h.ChangeMe)
 }

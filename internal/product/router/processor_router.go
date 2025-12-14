@@ -12,7 +12,7 @@ func RegisterProcessorRouter(app *fiber.App, h *handler.ProcessorHandler) {
 	proc.Post("/", middleware.AuthRequired(), h.CreateProcessor)
 	proc.Delete("/:procId", middleware.AuthRequired(), h.DeleteProcessor)
 
-	proc.Get("/", middleware.AuthRequired(), h.GetAllProcessors)
-	proc.Get("/:procId", middleware.AuthRequired(), h.GetProcessorById)
+	proc.Get("/", h.GetAllProcessors)
+	proc.Get("/:procId", h.GetProcessorById)
 	proc.Patch("/:procId", middleware.AuthRequired(), h.UpdateProcessor)
 }

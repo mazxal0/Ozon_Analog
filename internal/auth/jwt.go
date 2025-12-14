@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,10 +13,12 @@ func InitJwt(secret string) {
 	JwtSecret = []byte(secret)
 }
 
-func GenerateToken(userId string, role string) (string, error) {
+func GenerateToken(userId, role, name, cartId string) (string, error) {
 	claims := &Claims{
 		UserID: userId,
 		Role:   role,
+		Name:   name,
+		CartID: cartId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

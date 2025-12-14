@@ -106,9 +106,11 @@ func (h *FlashDriveHandler) DeleteFlashDrive(c *fiber.Ctx) error {
 }
 
 func (h *FlashDriveHandler) GetAllFlashDrives(c *fiber.Ctx) error {
+	// Разбираем бренды
 	brands := strings.Split(c.Query("brands", ""), ",")
-	capacityStr := strings.Split(c.Query("capacities", ""), ",")
 
+	// Разбираем объемы памяти
+	capacityStr := strings.Split(c.Query("capacities", ""), ",")
 	var capacities []int
 	for _, s := range capacityStr {
 		if n, err := strconv.Atoi(s); err == nil {
@@ -116,18 +118,27 @@ func (h *FlashDriveHandler) GetAllFlashDrives(c *fiber.Ctx) error {
 		}
 	}
 
+	// Разбираем интерфейсы USB
+	usbInterfaces := strings.Split(c.Query("usb_interfaces", ""), ",")
+
+	// Лимит и оффсет
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
+
+	// Сортировка по цене
 	priceAsc := c.QueryBool("price_asc")
 
+	// Собираем DTO для фильтра
 	filter := dto.FlashDriveFilterDTO{
-		Brands:     brands,
-		CapacityGB: capacities,
-		PriceAsc:   priceAsc,
-		Limit:      limit,
-		Offset:     offset,
+		Brands:       brands,
+		CapacityGB:   capacities,
+		USBInterface: usbInterfaces,
+		PriceAsc:     priceAsc,
+		Limit:        limit,
+		Offset:       offset,
 	}
 
+	// Получаем данные через сервис
 	list, err := h.service.GetAllFlashDrives(filter)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})

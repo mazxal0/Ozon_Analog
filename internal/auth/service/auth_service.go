@@ -7,6 +7,7 @@ import (
 	"Market_backend/internal/common"
 	"Market_backend/internal/common/utils"
 	"fmt"
+	"github.com/google/uuid"
 
 	"gorm.io/gorm"
 
@@ -37,7 +38,7 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 	}
 
 	user, err := s.repo.GetUserByEmail(dto.Email)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return err
 	}
 	if user != nil {
@@ -46,61 +47,60 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 
 	hashPassword, _ := utils.HashPassword(dto.Password)
 
-	newUser := &models.User{
-		Email:         dto.Email,
-		Name:          dto.Name,
-		Surname:       dto.Surname,
-		PasswordHash:  hashPassword,
-		LastName:      dto.LastName,
-		Number:        dto.Number,
-		Role:          dto.Role,
-		EmailVerified: false,
-	}
+	return s.repo.DB().Transaction(func(tx *gorm.DB) error { // <-- здесь напрямую Transaction
+		userID := uuid.New()
+		cartID := uuid.New()
 
-	if err := s.repo.CreateUser(newUser); err != nil {
-		return err
-	}
+		user := &models.User{
+			ID:            userID,
+			Email:         dto.Email,
+			Name:          dto.Name,
+			Surname:       dto.Surname,
+			LastName:      dto.LastName,
+			Number:        dto.Number,
+			Role:          dto.Role,
+			PasswordHash:  hashPassword,
+			EmailVerified: false,
+			CartID:        cartID, // сразу присваиваем CartID
+		}
 
-	if err := s.cartRepo.CreateCart(newUser.ID); err != nil {
-		return err
-	}
+		cart := &models.Cart{
+			ID:     cartID,
+			UserID: userID,
+		}
 
-	// ✅ Генерация 6-значного кода
-	emailCode := utils.GenerateSixDigitCode()
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
 
-	confirmation := &models.EmailConfirmation{
-		UserID:    newUser.ID,
-		Code:      emailCode,
-		ExpiresAt: time.Now().Add(10 * time.Minute),
-		Used:      false,
-	}
+		if err := tx.Create(cart).Error; err != nil {
+			return err
+		}
 
-	if err := s.repo.CreateEmailToken(confirmation); err != nil {
-		return err
-	}
+		// Создание EmailConfirmation
+		code := utils.GenerateSixDigitCode()
+		confirmation := &models.EmailConfirmation{
+			UserID:    userID,
+			Code:      code,
+			ExpiresAt: time.Now().Add(10 * time.Minute),
+			Used:      false,
+		}
 
-	// ✅ Отправка письма ТОЛЬКО С КОДОМ
-	body := fmt.Sprintf(`
+		if err := tx.Create(confirmation).Error; err != nil {
+			return err
+		}
+
+		// Отправка письма
+		body := fmt.Sprintf(`
 <h1>Market</h1>
 <p>Здравствуйте, %s!</p>
 <p>Ваш код подтверждения:</p>
 <h2>%s</h2>
 <p>Код действует 10 минут.</p>
-`,
-		newUser.Name,
-		emailCode,
-	)
+`, user.Name, code)
 
-	if err := s.mailSender.SendEmail(
-		newUser.Email,
-		"Подтвердите почту",
-		body,
-	); err != nil {
-		return err
-	}
-
-	// ✅ НИЧЕГО НЕ ВОЗВРАЩАЕМ, КРОМЕ УСПЕХА
-	return nil
+		return s.mailSender.SendEmail(user.Email, "Подтвердите почту", body)
+	})
 }
 
 func (s *AuthService) Login(dto dto.AuthLogin) error {
@@ -115,11 +115,6 @@ func (s *AuthService) Login(dto dto.AuthLogin) error {
 
 	if user == nil {
 		return errors.New("user does not exist")
-	}
-
-	// ✅ Почта уже должна быть подтверждена
-	if user.EmailVerified == false {
-		return errors.New("email is not verified")
 	}
 
 	// ✅ Проверка пароля
@@ -201,7 +196,7 @@ func (s *AuthService) RefreshToken(token string) (string, string, error) {
 		return "", "", err
 	}
 
-	accessToken, err := auth.GenerateToken(user.ID.String(), string(user.Role))
+	accessToken, err := auth.GenerateToken(user.ID.String(), string(user.Role), user.Name, user.CartID.String())
 	if err != nil {
 		return "", "", err
 	}
@@ -242,7 +237,7 @@ func (s *AuthService) ConfirmCode(code, email string) (string, string, error) {
 }
 
 func (s *AuthService) issueTokens(user *models.User) (string, string, error) {
-	access, err := auth.GenerateToken(user.ID.String(), string(user.Role))
+	access, err := auth.GenerateToken(user.ID.String(), string(user.Role), user.Name, user.CartID.String())
 	if err != nil {
 		return "", "", err
 	}

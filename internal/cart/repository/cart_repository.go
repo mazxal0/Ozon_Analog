@@ -18,11 +18,17 @@ func NewCartRepository() *CartRepository {
 	return &CartRepository{db: common.DB}
 }
 
-func (r *CartRepository) CreateCart(userId uuid.UUID) error {
-	return r.db.Create(&models.Cart{
+func (r *CartRepository) CreateCart(userId uuid.UUID) (uuid.UUID, error) {
+	cart := models.Cart{
 		ID:     uuid.New(),
 		UserID: userId,
-	}).Error
+	}
+
+	if err := r.db.Create(&cart).Error; err != nil {
+		return uuid.Nil, err
+	}
+
+	return cart.ID, nil
 }
 
 func (r *CartRepository) GetItem(userId, itemId uuid.UUID) (*dto.CartItemWithProduct, error) {
@@ -198,16 +204,22 @@ func (r *CartRepository) GetAllCartItems(userId, cartId uuid.UUID) ([]dto.GetCar
 
 	for _, ci := range cartItems {
 		price := priceMap[ci.ProductID]
+		name := ""
 
-		// Проверяем количество для опта
 		switch ci.ProductType {
 		case types.Processor:
-			if proc, ok := procMap[ci.ProductID]; ok && ci.Quantity >= proc.WholesaleMinQty {
-				price = proc.WholesalePrice
+			if proc, ok := procMap[ci.ProductID]; ok {
+				name = proc.Name
+				if ci.Quantity >= proc.WholesaleMinQty {
+					price = proc.WholesalePrice
+				}
 			}
 		case types.FlashDriver:
-			if flash, ok := flashMap[ci.ProductID]; ok && ci.Quantity >= flash.WholesaleMinQty {
-				price = flash.WholesalePrice
+			if flash, ok := flashMap[ci.ProductID]; ok {
+				name = flash.Name
+				if ci.Quantity >= flash.WholesaleMinQty {
+					price = flash.WholesalePrice
+				}
 			}
 		}
 
@@ -216,7 +228,8 @@ func (r *CartRepository) GetAllCartItems(userId, cartId uuid.UUID) ([]dto.GetCar
 			ProductId:   ci.ProductID,
 			ProductType: ci.ProductType,
 			Quantity:    ci.Quantity,
-			Price:       price, // 🔥 актуальная цена с учетом количества
+			Price:       price,
+			Name:        name, // <-- добавлено
 			ImageUrl:    imageMap[ci.ProductID],
 		})
 	}
@@ -324,4 +337,12 @@ func (r *CartRepository) ClearCartTx(tx *gorm.DB, userId, cartId uuid.UUID) erro
 		Where("cart_id = ? AND cart_id IN (SELECT id FROM carts WHERE user_id = ?)", cartId, userId).
 		Delete(&models.CartItem{}).
 		Error
+}
+
+func (r *CartRepository) GetCartItemsByOrder(orderId uuid.UUID) ([]models.CartItem, error) {
+	var items []models.CartItem
+	if err := r.db.Where("order_id = ?", orderId).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
 }

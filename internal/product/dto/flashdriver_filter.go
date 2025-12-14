@@ -1,10 +1,9 @@
 package dto
 
 type FlashDriveFilterDTO struct {
-	Brands     []string `json:"brands"`
-	CapacityGB []int    `json:"capacity_gb"`
-	USBType    []string `json:"usb_type"`
-	USBVersion []string `json:"usb_version"`
+	Brands       []string `json:"brands"`
+	CapacityGB   []int    `json:"capacity_gb"`
+	USBInterface []string `json:"usb_interface"`
 
 	PriceAsc bool `json:"price_asc"`
 

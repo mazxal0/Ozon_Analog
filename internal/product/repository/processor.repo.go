@@ -2,6 +2,7 @@ package repository
 
 import (
 	"Market_backend/internal/common"
+	"Market_backend/internal/common/types"
 	"Market_backend/internal/product/dto"
 	"Market_backend/models"
 	"github.com/google/uuid"
@@ -25,40 +26,53 @@ func (r *ProcessorRepository) DeleteProcessor(procID uuid.UUID) error {
 }
 
 func (r *ProcessorRepository) GetProcessorsByFilter(filter dto.ProcessorFilterDTO) ([]dto.AllProcessorsResponseDTO, error) {
-	subQuery := r.db.Model(&models.Image{}).
-		Select("url").
-		Where("images.processor_id = processors.id").
-		Order("created_at ASC").
-		Limit(1)
+	var result []dto.AllProcessorsResponseDTO
 
-	query := r.db.Model(&models.Processor{}).
-		Select("id, name, retail_price, wholesale_price, (?) as image_url", subQuery)
+	db := r.db.Table("processors p").
+		Select(`
+			p.id,
+			p.name,
+			p.retail_price,
+			p.wholesale_price,
+			i.url AS image_url
+		`).
+		Joins(`
+			LEFT JOIN LATERAL (
+				SELECT url
+				FROM images
+				WHERE images.processor_id = p.id
+				ORDER BY created_at ASC
+				LIMIT 1
+			) i ON true
+		`)
 
 	// фильтры
 	if len(filter.Brands) > 0 && !(len(filter.Brands) == 1 && filter.Brands[0] == "") {
-		query = query.Where("brand IN ?", filter.Brands)
+		db = db.Where("p.brand IN ?", filter.Brands)
 	}
 	if len(filter.Frequencies) > 0 {
-		query = query.Where("base_frequency IN ?", filter.Frequencies)
+		db = db.Where("p.base_frequency IN ?", filter.Frequencies)
 	}
 	if len(filter.Cores) > 0 {
-		query = query.Where("cores IN ?", filter.Cores)
+		db = db.Where("p.cores IN ?", filter.Cores)
 	}
 
+	// сортировка
 	if filter.PriceAsc {
-		query = query.Order("retail_price ASC")
+		db = db.Order("p.retail_price ASC")
 	} else {
-		query = query.Order("retail_price DESC")
+		db = db.Order("p.retail_price DESC")
 	}
 
-	query = query.Limit(filter.Limit).Offset(filter.Offset)
+	// пагинация
+	db = db.Limit(filter.Limit).Offset(filter.Offset)
 
-	var processors []dto.AllProcessorsResponseDTO
-	if err := query.Scan(&processors).Error; err != nil {
+	// выполняем запрос
+	if err := db.Scan(&result).Error; err != nil {
 		return nil, err
 	}
 
-	return processors, nil
+	return result, nil
 }
 
 func (r *ProcessorRepository) GetProcessorById(procId uuid.UUID) (*dto.ProcessorWithImagesDTO, error) {
@@ -229,6 +243,26 @@ func (r *ProcessorRepository) AddImages(procID uuid.UUID, urls []string) error {
 		if err := r.db.Create(&img).Error; err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (r *ProcessorRepository) CountOrders(procID uuid.UUID) (int, error) {
+	var count int64
+	err := r.db.Model(&models.OrderItem{}).
+		Where("product_id = ? AND product_type = ?", procID, types.Processor).
+		Distinct("order_id"). // учитываем только уникальные заказы
+		Count(&count).Error
+	return int(count), err
+}
+
+func (r *ProcessorRepository) UpdateStock(processorID uuid.UUID, newStock int) error {
+	res := r.db.Model(&models.Processor{}).Where("id = ?", processorID).Update("stock", newStock)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }

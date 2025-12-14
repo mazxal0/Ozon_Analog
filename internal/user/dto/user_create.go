@@ -1,11 +1,12 @@
 package dto
 
-type UserCreate struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type UserChange struct {
 	Name     string `json:"name"`
 	Surname  string `json:"surname"`
-	Nickname string `json:"nickname"`
+	LastName string `json:"last_name"`
 	Number   string `json:"number"`
-	Role     string `json:"role"`
+}
+
+type PasswordChange struct {
+	Password string `json:"password"`
 }

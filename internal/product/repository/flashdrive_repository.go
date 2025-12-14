@@ -2,6 +2,7 @@ package repository
 
 import (
 	"Market_backend/internal/common"
+	"Market_backend/internal/common/types"
 	"Market_backend/internal/product/dto"
 	"Market_backend/models"
 
@@ -59,8 +60,8 @@ func (r *FlashDriveRepository) GetFlashDrivesByFilter(filter dto.FlashDriveFilte
 		query = query.Where("flash_drives.capacity_gb IN ?", filter.CapacityGB)
 	}
 
-	if len(filter.USBVersion) > 0 && filter.USBVersion[0] != "" {
-		query = query.Where("flash_drives.usb_interface IN ?", filter.USBVersion)
+	if len(filter.USBInterface) > 0 && filter.USBInterface[0] != "" {
+		query = query.Where("flash_drives.usb_interface IN ?", filter.USBInterface)
 	}
 
 	if filter.PriceAsc {
@@ -267,6 +268,26 @@ func (r *FlashDriveRepository) AddImages(fdID uuid.UUID, urls []string) error {
 		if err := r.db.Create(&img).Error; err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (r *FlashDriveRepository) CountOrders(flashID uuid.UUID) (int, error) {
+	var count int64
+	err := r.db.Model(&models.OrderItem{}).
+		Where("product_id = ? AND product_type = ?", flashID, types.FlashDriver).
+		Distinct("order_id"). // учитываем только уникальные заказы
+		Count(&count).Error
+	return int(count), err
+}
+
+func (r *FlashDriveRepository) UpdateStock(flashID uuid.UUID, newStock int) error {
+	res := r.db.Model(&models.FlashDrive{}).Where("id = ?", flashID).Update("stock", newStock)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }

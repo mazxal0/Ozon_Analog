@@ -41,5 +41,7 @@ type FlashDriveWithImagesDTO struct {
 	WarrantyMonths  int    `json:"warranty_months"`
 	Features        string `json:"features"`
 
+	CountOrders int `json:"count_orders"`
+
 	ImageURLs []string `json:"image_urls"`
 }

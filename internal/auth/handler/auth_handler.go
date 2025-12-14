@@ -3,7 +3,6 @@ package handler
 import (
 	"Market_backend/internal/auth/dto"
 	"Market_backend/internal/auth/service"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -74,9 +73,9 @@ func (handler *AuthHandler) Refresh(c *fiber.Ctx) error {
 		Name:     "refresh_token",
 		Value:    newRefreshToken,
 		HTTPOnly: true,
-		Secure:   false, // включить для HTTPS
-		SameSite: "Strict",
-		Path:     "/auth/",
+		Secure:   true, // включить для HTTPS
+		SameSite: "None",
+		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
 
@@ -106,9 +105,9 @@ func (handler *AuthHandler) Logout(c *fiber.Ctx) error {
 		Name:     "refresh_token",
 		Value:    "",
 		MaxAge:   -1,
-		Path:     "/auth/",
+		Path:     "/",
 		HTTPOnly: true,
-		SameSite: "Strict",
+		SameSite: "None",
 	})
 
 	return c.JSON(fiber.Map{
@@ -139,9 +138,9 @@ func (handler *AuthHandler) ConfirmCode(c *fiber.Ctx) error {
 		Name:     "refresh_token",
 		Value:    refresh,
 		HTTPOnly: true,
-		Secure:   false, // включи если HTTPS
-		SameSite: "Strict",
-		Path:     "/auth/",
+		Secure:   true, // включи если HTTPS
+		SameSite: "None",
+		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
 

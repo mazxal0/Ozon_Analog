@@ -2,6 +2,7 @@ package repository
 
 import (
 	"Market_backend/internal/common"
+	"Market_backend/internal/user/dto"
 	"Market_backend/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -51,4 +52,8 @@ func (r *UserRepository) GetMe(userId uuid.UUID) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *UserRepository) ChangeUser(change dto.UserChange, userId uuid.UUID) error {
+	return r.db.Model(&models.User{}).Where("id = ?", userId).Updates(change).Error
 }

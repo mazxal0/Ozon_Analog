@@ -25,6 +25,10 @@ func NewProcessorService(repo *repository.ProcessorRepository, storage *storage.
 	}
 }
 
+func (s *ProcessorService) DB() *repository.ProcessorRepository {
+	return s.procRepo
+}
+
 func (s *ProcessorService) CreateProcessor(dto dto.ProcessorCreateDTO) (*models.Processor, error) {
 	// создаем processor с генерацией SKU
 	processor := &models.Processor{
@@ -116,7 +120,15 @@ func (s *ProcessorService) GetAllProcessors(filter dto.ProcessorFilterDTO) ([]dt
 }
 
 func (s *ProcessorService) GetProcessorById(procID uuid.UUID) (*dto.ProcessorWithImagesDTO, error) {
-	return s.procRepo.GetProcessorById(procID)
+	totalModel, err := s.procRepo.GetProcessorById(procID)
+	if err != nil {
+		return nil, err
+	}
+	totalModel.CountOrders, err = s.procRepo.CountOrders(procID)
+	if err != nil {
+		return nil, err
+	}
+	return totalModel, nil
 }
 
 func (s *ProcessorService) UpdateProcessor(procID uuid.UUID, procDto dto.ProcUpdate) error {

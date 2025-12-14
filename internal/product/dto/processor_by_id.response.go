@@ -34,5 +34,6 @@ type ProcessorWithImagesDTO struct {
 	MaxTemperature     int       `json:"max_temperature"`
 	PackageContents    string    `json:"package_contents"`
 	CountryOfOrigin    string    `json:"country_of_origin"`
+	CountOrders        int       `json:"count_orders"`
 	ImageURLs          []string  `json:"image_urls"` // только URL
 }

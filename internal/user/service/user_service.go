@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Market_backend/internal/user/dto"
 	"Market_backend/internal/user/repository"
 	"Market_backend/models"
 
@@ -21,4 +22,8 @@ func (s *UserService) GetAllUsers() ([]models.User, error) {
 
 func (s *UserService) GetMe(id uuid.UUID) (*models.User, error) {
 	return s.repo.GetMe(id)
+}
+
+func (s *UserService) ChangeMe(userChange dto.UserChange, id uuid.UUID) error {
+	return s.repo.ChangeUser(userChange, id)
 }

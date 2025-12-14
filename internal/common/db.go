@@ -44,6 +44,22 @@ func InitDB() {
         END$$;
     `)
 
+	DB.Exec(`
+    DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method') THEN
+            CREATE TYPE payment_method AS ENUM ('bank_card','sbp');
+        END IF;
+    END$$;
+`)
+
+	DB.Exec(`
+    DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+            CREATE TYPE payment_status AS ENUM ('pending','succeeded','canceled');
+        END IF;
+    END$$;
+`)
+
 	// AutoMigrate всех моделей
 	if err := DB.AutoMigrate(
 		// Пользователи и токены
@@ -61,6 +77,9 @@ func InitDB() {
 		&models.CartItem{},
 		&models.Order{},
 		&models.OrderItem{},
+		&models.Payment{},
+
+		&models.Message{},
 	); err != nil {
 		log.Fatal("DB migrate error:", err)
 	}

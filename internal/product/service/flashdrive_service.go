@@ -25,6 +25,10 @@ func NewFlashDriveService(repo *repository.FlashDriveRepository, storage *storag
 	}
 }
 
+func (s *FlashDriveService) DB() *repository.FlashDriveRepository {
+	return s.repo
+}
+
 //
 // CREATE
 //
@@ -128,7 +132,15 @@ func (s *FlashDriveService) GetAllFlashDrives(filter dto.FlashDriveFilterDTO) ([
 //
 
 func (s *FlashDriveService) GetFlashDriveById(id uuid.UUID) (*dto.FlashDriveWithImagesDTO, error) {
-	return s.repo.GetFlashDriveById(id)
+	totalModel, err := s.repo.GetFlashDriveById(id)
+	if err != nil {
+		return nil, err
+	}
+	totalModel.CountOrders, err = s.repo.CountOrders(id)
+	if err != nil {
+		return nil, err
+	}
+	return totalModel, nil
 }
 
 //
