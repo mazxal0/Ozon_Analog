@@ -17,9 +17,6 @@ var AllowedOrigins string
 var (
 	AppPort string
 
-	RedisHost string
-	RedisPort string
-
 	SMTPHost     string
 	SMTPPort     string
 	SMTPEmail    string
@@ -31,6 +28,9 @@ var (
 	S3SecretKey string
 	S3Bucket    string
 	S3UseSSL    string
+
+	S3Name     string
+	S3Password string
 )
 
 func Init() {
@@ -63,6 +63,9 @@ func Init() {
 	S3SecretKey = os.Getenv("S3_SECRET_KEY")
 	S3Bucket = os.Getenv("S3_BUCKET")
 	S3UseSSL = os.Getenv("S3_USE_SSL")
+
+	S3Name = os.Getenv("MINIO_ROOT_USER")
+	S3Password = os.Getenv("MINIO_ROOT_PASSWORD")
 
 	AppPort = os.Getenv("APP_PORT")
 }
