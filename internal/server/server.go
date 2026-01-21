@@ -51,6 +51,10 @@ func Start() {
 		log.Fatal(err)
 	}
 
+	if config.AllowedOrigins == "" {
+		config.AllowedOrigins = "http://localhost:3000"
+	}
+
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     config.AllowedOrigins, // Обрати внимание на запятую и пробел
 		AllowMethods:     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
