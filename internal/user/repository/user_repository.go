@@ -54,6 +54,26 @@ func (r *UserRepository) GetMe(userId uuid.UUID) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) ChangeUser(change dto.UserChange, userId uuid.UUID) error {
-	return r.db.Model(&models.User{}).Where("id = ?", userId).Updates(change).Error
+func (r *UserRepository) ChangeUser(
+	userID uuid.UUID,
+	change dto.UserChange,
+) (*models.User, error) {
+
+	// 1. Обновляем
+	result := r.db.
+		Model(&models.User{}).
+		Where("id = ?", userID).
+		Updates(change)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// 2. Забираем обновлённого пользователя
+	var user models.User
+	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }

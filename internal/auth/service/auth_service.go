@@ -79,8 +79,21 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 
 		// Создание EmailConfirmation
 		code := utils.GenerateSixDigitCode()
+		if err := s.checkEmailRateLimit(dto.Email); err != nil {
+			return err
+		}
+
+		// инвалидируем старые коды
+		if err := tx.Model(&models.EmailConfirmation{}).
+			Where("email = ? AND type = ? AND used = false", dto.Email, "register").
+			Update("used", true).Error; err != nil {
+			return err
+		}
+
 		confirmation := &models.EmailConfirmation{
 			UserID:    userID,
+			Email:     dto.Email,
+			Type:      "register",
 			Code:      code,
 			ExpiresAt: time.Now().Add(10 * time.Minute),
 			Used:      false,
@@ -125,8 +138,18 @@ func (s *AuthService) Login(dto dto.AuthLogin) error {
 	// ✅ Генерируем код для ВХОДА
 	loginCode := utils.GenerateSixDigitCode()
 
+	if err := s.checkEmailRateLimit(user.Email); err != nil {
+		return err
+	}
+
+	if err := s.repo.InvalidateCodes(user.Email, "login"); err != nil {
+		return err
+	}
+
 	confirmation := &models.EmailConfirmation{
 		UserID:    user.ID,
+		Email:     user.Email,
+		Type:      "login",
 		Code:      loginCode,
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 		Used:      false,
@@ -205,9 +228,15 @@ func (s *AuthService) RefreshToken(token string) (string, string, error) {
 }
 
 func (s *AuthService) ConfirmCode(code, email string) (string, string, error) {
-	confirmation, err := s.repo.GetValidEmailCode(code, email)
+
+	// сначала ищем login
+	confirmation, err := s.repo.GetValidEmailCode(code, email, "login")
 	if err != nil {
-		return "", "", err
+		// если не нашли — пробуем register
+		confirmation, err = s.repo.GetValidEmailCode(code, email, "register")
+		if err != nil {
+			return "", "", errors.New("invalid or expired code")
+		}
 	}
 
 	user, err := s.repo.GetUserByID(confirmation.UserID)
@@ -215,25 +244,17 @@ func (s *AuthService) ConfirmCode(code, email string) (string, string, error) {
 		return "", "", err
 	}
 
-	// Если email не подтверждён — это регистрация
-	if !user.EmailVerified {
+	if confirmation.Type == "register" && !user.EmailVerified {
 		if err := s.repo.VerifyEmail(user.ID); err != nil {
 			return "", "", err
 		}
 	}
 
-	// Помечаем код как использованный
 	if err := s.repo.MarkCodeUsed(confirmation.ID); err != nil {
 		return "", "", err
 	}
 
-	// Генерируем токены
-	access, refreshToken, err := s.issueTokens(user)
-	if err != nil {
-		return "", "", err
-	}
-
-	return access, refreshToken, nil
+	return s.issueTokens(user)
 }
 
 func (s *AuthService) issueTokens(user *models.User) (string, string, error) {
@@ -257,4 +278,20 @@ func (s *AuthService) issueTokens(user *models.User) (string, string, error) {
 	}
 
 	return access, refreshToken.Token, nil
+}
+
+func (s *AuthService) checkEmailRateLimit(email string) error {
+	count, err := s.repo.CountCodesByEmail(
+		email,
+		time.Now().Add(-1*time.Hour),
+	)
+	if err != nil {
+		return err
+	}
+
+	if count >= 20 {
+		return errors.New("слишком много запросов. Попробуйте позже")
+	}
+
+	return nil
 }

@@ -82,15 +82,23 @@ func (r *AuthRepository) CreateEmailToken(token *models.EmailConfirmation) error
 	return r.db.Create(token).Error
 }
 
-func (r *AuthRepository) GetValidEmailCode(code, email string) (*models.EmailConfirmation, error) {
+func (r *AuthRepository) GetValidEmailCode(code, email, codeType string) (*models.EmailConfirmation, error) {
 	var token models.EmailConfirmation
-	err := r.db.Preload("User").
-		Joins("JOIN users ON users.id = email_confirmations.user_id").
-		Where("email_confirmations.code = ? AND users.email = ? AND email_confirmations.used = false AND email_confirmations.expires_at > ?", code, email, time.Now()).
+
+	err := r.db.
+		Where(`
+			code = ?
+			AND email = ?
+			AND type = ?
+			AND used = false
+			AND expires_at > ?
+		`, code, email, codeType, time.Now()).
 		First(&token).Error
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &token, nil
 }
 
@@ -108,4 +116,18 @@ func (r *AuthRepository) UpdateUserCartID(userID, cartID uuid.UUID) error {
 	return r.db.Model(&models.User{}).
 		Where("id = ?", userID).
 		Update("cart_id", cartID).Error
+}
+
+func (r *AuthRepository) InvalidateCodes(email, codeType string) error {
+	return r.db.Model(&models.EmailConfirmation{}).
+		Where("email = ? AND type = ? AND used = false", email, codeType).
+		Update("used", true).Error
+}
+
+func (r *AuthRepository) CountCodesByEmail(email string, since time.Time) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.EmailConfirmation{}).
+		Where("email = ? AND created_at >= ?", email, since).
+		Count(&count).Error
+	return count, err
 }

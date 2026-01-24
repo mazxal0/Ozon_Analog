@@ -55,13 +55,14 @@ func (h *UserHandler) ChangeMe(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.service.ChangeMe(userChange, userID)
+	accessToken, err := h.service.ChangeMe(userChange, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "success",
+		"message":     "success",
+		"accessToken": accessToken,
 	})
 }

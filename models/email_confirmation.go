@@ -8,12 +8,15 @@ import (
 )
 
 type EmailConfirmation struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID    uuid.UUID
-	User      User
-	Code      string    `gorm:"size:6;not null"` // ✅ 6-значный код
-	ExpiresAt time.Time // ✅ время жизни кода
-	Used      bool      // ✅ использован или нет
+	ID     uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID uuid.UUID
+	User   User
+
+	Email     string `gorm:"not null;index"`         // 👈 для rate-limit
+	Type      string `gorm:"size:16;not null;index"` // login | register
+	Code      string `gorm:"size:6;not null"`
+	ExpiresAt time.Time
+	Used      bool
 	CreatedAt time.Time
 }
 

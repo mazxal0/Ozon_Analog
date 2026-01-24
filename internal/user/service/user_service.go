@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Market_backend/internal/auth"
 	"Market_backend/internal/user/dto"
 	"Market_backend/internal/user/repository"
 	"Market_backend/models"
@@ -24,6 +25,16 @@ func (s *UserService) GetMe(id uuid.UUID) (*models.User, error) {
 	return s.repo.GetMe(id)
 }
 
-func (s *UserService) ChangeMe(userChange dto.UserChange, id uuid.UUID) error {
-	return s.repo.ChangeUser(userChange, id)
+func (s *UserService) ChangeMe(userChange dto.UserChange, id uuid.UUID) (string, error) {
+	user, err := s.repo.ChangeUser(id, userChange)
+	if err != nil {
+		return "", err
+	}
+
+	accessToken, err := auth.GenerateToken(user.ID.String(), string(user.Role), user.Name, user.CartID.String())
+	if err != nil {
+		return "", err
+	}
+
+	return accessToken, nil
 }

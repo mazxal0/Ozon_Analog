@@ -33,7 +33,6 @@ func (m *MailService) SendEmail(to, subject, body string) error {
 	if err != nil {
 		return err
 	}
-	defer c.Quit()
 
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: true, // только для dev
