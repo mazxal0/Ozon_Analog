@@ -74,7 +74,7 @@ func (handler *AuthHandler) Refresh(c *fiber.Ctx) error {
 		Value:    newRefreshToken,
 		HTTPOnly: true,
 		Secure:   true, // включить для HTTPS
-		SameSite: "None",
+		SameSite: "Lax",
 		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
@@ -107,7 +107,8 @@ func (handler *AuthHandler) Logout(c *fiber.Ctx) error {
 		MaxAge:   -1,
 		Path:     "/",
 		HTTPOnly: true,
-		SameSite: "None",
+		Secure:   true,
+		SameSite: "Lax",
 	})
 
 	return c.JSON(fiber.Map{
@@ -139,7 +140,7 @@ func (handler *AuthHandler) ConfirmCode(c *fiber.Ctx) error {
 		Value:    refresh,
 		HTTPOnly: true,
 		Secure:   true, // включи если HTTPS
-		SameSite: "None",
+		SameSite: "Lax",
 		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
