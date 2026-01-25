@@ -139,7 +139,9 @@ func (h *OrderHandler) GetOrders(c *fiber.Ctx) error {
 			totalPrice := item.UnitPrice * float64(item.Quantity)
 
 			response.TotalItems += item.Quantity
-			response.TotalSum += totalPrice
+			if order.Status != types.Cancelled {
+				response.TotalSum += totalPrice
+			}
 
 			itemsDTO = append(itemsDTO, dto.OrderItemDTO{
 				Name:     name,
@@ -256,6 +258,8 @@ func (h *OrderHandler) UpdateOrderStatusHandler(c *fiber.Ctx) error {
 		newStatus = types.Paid
 	case "completed":
 		newStatus = types.Completed
+	case "cancelled":
+		newStatus = types.Cancelled
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid status",

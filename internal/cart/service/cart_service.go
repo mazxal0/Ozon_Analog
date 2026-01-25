@@ -25,7 +25,7 @@ func NewCartService(repo *repository.CartRepository, procRepo *ProductRepo.Proce
 
 func (s *CartService) AddNewItem(cartItem dto.CartItemDto) (uuid.UUID, error) {
 	var currentPrice float64
-	var stock int
+	//var stock int
 
 	switch cartItem.ProductType {
 	case "P": // Processor
@@ -37,10 +37,10 @@ func (s *CartService) AddNewItem(cartItem dto.CartItemDto) (uuid.UUID, error) {
 			return uuid.Nil, fmt.Errorf("processor not found")
 		}
 
-		stock = proc.Stock
-		if cartItem.Quantity > stock {
-			return uuid.Nil, fmt.Errorf("cannot add %d items, only %d in stock", cartItem.Quantity, stock)
-		}
+		//stock = proc.Stock
+		//if cartItem.Quantity > stock {
+		//	return uuid.Nil, fmt.Errorf("cannot add %d items, only %d in stock", cartItem.Quantity, stock)
+		//}
 
 		if cartItem.Quantity >= proc.WholesaleMinQty {
 			currentPrice = proc.WholesalePrice
@@ -57,10 +57,10 @@ func (s *CartService) AddNewItem(cartItem dto.CartItemDto) (uuid.UUID, error) {
 			return uuid.Nil, fmt.Errorf("flash drive not found")
 		}
 
-		stock = flash.Stock
-		if cartItem.Quantity > stock {
-			return uuid.Nil, fmt.Errorf("cannot add %d items, only %d in stock", cartItem.Quantity, stock)
-		}
+		//stock = flash.Stock
+		//if cartItem.Quantity > stock {
+		//	return uuid.Nil, fmt.Errorf("cannot add %d items, only %d in stock", cartItem.Quantity, stock)
+		//}
 
 		if cartItem.Quantity >= flash.WholesaleMinQty {
 			currentPrice = flash.WholesalePrice

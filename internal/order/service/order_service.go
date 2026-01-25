@@ -88,14 +88,18 @@ func (s *OrderService) GetAllUserOrders(userId uuid.UUID) ([]models.Order, error
 	var orders []models.Order
 
 	err := s.repo.DB().
-		Where("user_id = ?", userId).
+		Where("user_id = ? AND status IN ?", userId, []string{
+			string(types.InProgress),
+			string(types.Completed),
+			string(types.Paid),
+			string(types.Cancelled),
+		}).
 		Preload("Items").
 		Order("created_at DESC").
 		Find(&orders).Error
 
 	return orders, err
 }
-
 func (s *OrderService) GetAllOrders() ([]models.Order, error) {
 	var orders []models.Order
 

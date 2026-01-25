@@ -25,6 +25,8 @@ func (r *AuthRepository) DB() *gorm.DB {
 	return r.db
 }
 
+// ===================== RefreshToken =====================
+
 func (r *AuthRepository) CreateRefreshToken(token *models.RefreshToken) error {
 	return r.db.Create(token).Error
 }
@@ -51,6 +53,8 @@ func (r *AuthRepository) DeleteRefreshTokenByHash(hash string) error {
 	return r.db.Where("token_hash = ?", hash).Delete(&models.RefreshToken{}).Error
 }
 
+// ===================== User =====================
+
 func (r *AuthRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
@@ -70,6 +74,14 @@ func (r *AuthRepository) GetUserByID(ID uuid.UUID) (*models.User, error) {
 	return &user, nil
 }
 
+func (r *AuthRepository) GetUserByIDTx(tx *gorm.DB, ID uuid.UUID) (*models.User, error) {
+	var user models.User
+	if err := tx.Where("id = ?", ID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *AuthRepository) DeleteUserByEmail(email string) error {
 	return r.db.Where("email = ?", email).Delete(&models.User{}).Error
 }
@@ -78,56 +90,87 @@ func (r *AuthRepository) CreateUser(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
+func (r *AuthRepository) UpdateUserCartID(userID, cartID uuid.UUID) error {
+	return r.db.Model(&models.User{}).Where("id = ?", userID).Update("cart_id", cartID).Error
+}
+
+// ===================== EmailConfirmation =====================
+
+// Создание токена
 func (r *AuthRepository) CreateEmailToken(token *models.EmailConfirmation) error {
 	return r.db.Create(token).Error
 }
 
+// Получаем валидный код (без Tx)
 func (r *AuthRepository) GetValidEmailCode(code, email, codeType string) (*models.EmailConfirmation, error) {
 	var token models.EmailConfirmation
-
-	err := r.db.
-		Where(`
-			code = ?
-			AND email = ?
-			AND type = ?
-			AND used = false
-			AND expires_at > ?
-		`, code, email, codeType, time.Now()).
-		First(&token).Error
-
+	err := r.db.Where(`
+		code = ? AND email = ? AND type = ? AND used = false AND expires_at > ?
+	`, code, email, codeType, time.Now()).First(&token).Error
 	if err != nil {
 		return nil, err
 	}
-
 	return &token, nil
 }
 
-// 2️⃣ Ставим EmailVerified = true для пользователя
+// Получаем валидный код внутри транзакции
+func (r *AuthRepository) GetValidEmailCodeTx(tx *gorm.DB, code, email, codeType string) (*models.EmailConfirmation, error) {
+	var token models.EmailConfirmation
+	err := tx.Where(`
+		code = ? AND email = ? AND type = ? AND used = false AND expires_at > ?
+	`, code, email, codeType, time.Now()).First(&token).Error
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+// Ставим EmailVerified = true
 func (r *AuthRepository) VerifyEmail(userID uuid.UUID) error {
-	return r.db.Model(&models.User{}).Where("id = ?", userID).Update("email_verified", true).Error
+	return r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"email_verified": true,
+		"updated_at":     time.Now(),
+	}).Error
 }
 
-// 3️⃣ Помечаем токен как использованный
-func (r *AuthRepository) MarkCodeUsed(codeID uuid.UUID) error {
-	return r.db.Model(&models.EmailConfirmation{}).Where("id = ?", codeID).Update("used", true).Error
+// Помечаем код как использованный внутри транзакции
+func (r *AuthRepository) MarkCodeUsedTx(tx *gorm.DB, codeID uuid.UUID) error {
+	return tx.Model(&models.EmailConfirmation{}).
+		Where("id = ? AND used = false", codeID).
+		Updates(map[string]interface{}{
+			"used":       true,
+			"updated_at": time.Now(),
+		}).Error
 }
 
-func (r *AuthRepository) UpdateUserCartID(userID, cartID uuid.UUID) error {
-	return r.db.Model(&models.User{}).
-		Where("id = ?", userID).
-		Update("cart_id", cartID).Error
-}
-
-func (r *AuthRepository) InvalidateCodes(email, codeType string) error {
-	return r.db.Model(&models.EmailConfirmation{}).
+// Инвалидируем все старые коды данного типа внутри транзакции
+func (r *AuthRepository) InvalidateCodesTx(tx *gorm.DB, email, codeType string) error {
+	return tx.Model(&models.EmailConfirmation{}).
 		Where("email = ? AND type = ? AND used = false", email, codeType).
-		Update("used", true).Error
+		Updates(map[string]interface{}{
+			"used":       true,
+			"updated_at": time.Now(),
+		}).Error
 }
 
+// Счётчик для rate-limit
 func (r *AuthRepository) CountCodesByEmail(email string, since time.Time) (int64, error) {
 	var count int64
 	err := r.db.Model(&models.EmailConfirmation{}).
 		Where("email = ? AND created_at >= ?", email, since).
 		Count(&count).Error
 	return count, err
+}
+
+func (r *AuthRepository) GetLatestValidEmailCodeTx(tx *gorm.DB, email, codeType string) (*models.EmailConfirmation, error) {
+	var token models.EmailConfirmation
+	err := tx.
+		Where("email = ? AND type = ? AND used = false AND expires_at > ?", email, codeType, time.Now()).
+		Order("created_at DESC").
+		Limit(1).
+		First(&token).Error
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
 }

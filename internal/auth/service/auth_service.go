@@ -29,6 +29,7 @@ func NewAuthService(repo *repository.AuthRepository, cartRepo *CartRepo.CartRepo
 	return &AuthService{repo: repo, cartRepo: cartRepo, mailSender: mail.NewMailService()}
 }
 
+// ===================== Registration =====================
 func (s *AuthService) Registration(dto dto.AuthRegister) error {
 	if err := dto.Validate(); err != nil {
 		return err
@@ -37,17 +38,13 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 		return errors.New("passwords do not match")
 	}
 
-	user, err := s.repo.GetUserByEmail(dto.Email)
-	if err != nil {
-		return err
-	}
-	if user != nil {
+	if user, _ := s.repo.GetUserByEmail(dto.Email); user != nil {
 		return errors.New("user already exists")
 	}
 
 	hashPassword, _ := utils.HashPassword(dto.Password)
 
-	return s.repo.DB().Transaction(func(tx *gorm.DB) error { // <-- здесь напрямую Transaction
+	return s.repo.DB().Transaction(func(tx *gorm.DB) error {
 		userID := uuid.New()
 		cartID := uuid.New()
 
@@ -61,35 +58,27 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 			Role:          dto.Role,
 			PasswordHash:  hashPassword,
 			EmailVerified: false,
-			CartID:        cartID, // сразу присваиваем CartID
-		}
-
-		cart := &models.Cart{
-			ID:     cartID,
-			UserID: userID,
+			CartID:        cartID,
 		}
 
 		if err := tx.Create(user).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Create(cart).Error; err != nil {
+		if err := tx.Create(&models.Cart{ID: cartID, UserID: userID}).Error; err != nil {
 			return err
 		}
 
-		// Создание EmailConfirmation
-		code := utils.GenerateSixDigitCode()
 		if err := s.checkEmailRateLimit(dto.Email); err != nil {
 			return err
 		}
 
 		// инвалидируем старые коды
-		if err := tx.Model(&models.EmailConfirmation{}).
-			Where("email = ? AND type = ? AND used = false", dto.Email, "register").
-			Update("used", true).Error; err != nil {
+		if err := s.repo.InvalidateCodesTx(tx, dto.Email, "register"); err != nil {
 			return err
 		}
 
+		code := utils.GenerateSixDigitCode()
 		confirmation := &models.EmailConfirmation{
 			UserID:    userID,
 			Email:     dto.Email,
@@ -103,7 +92,6 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 			return err
 		}
 
-		// Отправка письма
 		body := fmt.Sprintf(`
 <h1>Market</h1>
 <p>Здравствуйте, %s!</p>
@@ -116,73 +104,58 @@ func (s *AuthService) Registration(dto dto.AuthRegister) error {
 	})
 }
 
+// ===================== Login =====================
 func (s *AuthService) Login(dto dto.AuthLogin) error {
 	if err := dto.Validate(); err != nil {
 		return err
 	}
 
 	user, err := s.repo.GetUserByEmail(dto.Email)
-	if err != nil {
-		return err
-	}
-
-	if user == nil {
-		return errors.New("user does not exist")
-	}
-
-	// ✅ Проверка пароля
-	if !utils.CheckPasswordHash(dto.Password, user.PasswordHash) {
+	if err != nil || user == nil {
 		return errors.New("invalid user data")
 	}
 
-	// ✅ Генерируем код для ВХОДА
-	loginCode := utils.GenerateSixDigitCode()
+	if !utils.CheckPasswordHash(dto.Password, user.PasswordHash) {
+		return errors.New("invalid user data")
+	}
 
 	if err := s.checkEmailRateLimit(user.Email); err != nil {
 		return err
 	}
 
-	if err := s.repo.InvalidateCodes(user.Email, "login"); err != nil {
-		return err
-	}
+	loginCode := utils.GenerateSixDigitCode()
 
-	confirmation := &models.EmailConfirmation{
-		UserID:    user.ID,
-		Email:     user.Email,
-		Type:      "login",
-		Code:      loginCode,
-		ExpiresAt: time.Now().Add(10 * time.Minute),
-		Used:      false,
-	}
+	return s.repo.DB().Transaction(func(tx *gorm.DB) error {
+		if err := s.repo.InvalidateCodesTx(tx, user.Email, "login"); err != nil {
+			return err
+		}
 
-	if err := s.repo.CreateEmailToken(confirmation); err != nil {
-		return err
-	}
+		confirmation := &models.EmailConfirmation{
+			UserID:    user.ID,
+			Email:     user.Email,
+			Type:      "login",
+			Code:      loginCode,
+			ExpiresAt: time.Now().Add(10 * time.Minute),
+			Used:      false,
+		}
 
-	// ✅ Отправляем код на почту
-	body := fmt.Sprintf(`
+		if err := tx.Create(confirmation).Error; err != nil {
+			return err
+		}
+
+		body := fmt.Sprintf(`
 <h1>Market</h1>
 <p>Здравствуйте, %s!</p>
 <p>Код для входа:</p>
 <h2>%s</h2>
 <p>Код действует 10 минут.</p>
-`,
-		user.Name,
-		loginCode,
-	)
+`, user.Name, loginCode)
 
-	if err := s.mailSender.SendEmail(
-		user.Email,
-		"Код для входа",
-		body,
-	); err != nil {
-		return err
-	}
-
-	// ✅ ТУТ НЕТ ТОКЕНОВ!
-	return nil
+		return s.mailSender.SendEmail(user.Email, "Код для входа", body)
+	})
 }
 
+// ===================== Logout =====================
 func (s *AuthService) Logout(token string) error {
 	hash, err := utils.HashPassword(token)
 	if err != nil {
@@ -191,15 +164,14 @@ func (s *AuthService) Logout(token string) error {
 	return s.repo.DeleteRefreshTokenByHash(hash)
 }
 
+// ===================== RefreshToken =====================
 func (s *AuthService) RefreshToken(token string) (string, string, error) {
 	refreshToken, err := auth.ValidateRefreshToken(common.DB, token)
-
 	if err != nil {
 		return "", "", err
 	}
 
 	newRefreshToken, err := auth.GenerateRefreshToken()
-
 	if err != nil {
 		return "", "", err
 	}
@@ -209,7 +181,6 @@ func (s *AuthService) RefreshToken(token string) (string, string, error) {
 		TokenHash: newRefreshToken.TokenHash,
 		ExpiresAt: newRefreshToken.ExpiresAt,
 	})
-
 	if err != nil {
 		return "", "", err
 	}
@@ -227,36 +198,51 @@ func (s *AuthService) RefreshToken(token string) (string, string, error) {
 	return accessToken, newRefreshToken.Token, nil
 }
 
+// ===================== ConfirmCode =====================
 func (s *AuthService) ConfirmCode(code, email string) (string, string, error) {
+	var accessToken, refreshToken string
 
-	// сначала ищем login
-	confirmation, err := s.repo.GetValidEmailCode(code, email, "login")
-	if err != nil {
-		// если не нашли — пробуем register
-		confirmation, err = s.repo.GetValidEmailCode(code, email, "register")
+	err := s.repo.DB().Transaction(func(tx *gorm.DB) error {
+		// берём последний валидный код типа login
+		confirmation, err := s.repo.GetLatestValidEmailCodeTx(tx, email, "login")
+		if err != nil || confirmation.Code != code {
+			// если login не подошёл — пробуем register
+			confirmation, err = s.repo.GetLatestValidEmailCodeTx(tx, email, "register")
+			if err != nil || confirmation.Code != code {
+				return errors.New("invalid or expired code")
+			}
+		}
+
+		user, err := s.repo.GetUserByIDTx(tx, confirmation.UserID)
 		if err != nil {
-			return "", "", errors.New("invalid or expired code")
+			return err
 		}
-	}
 
-	user, err := s.repo.GetUserByID(confirmation.UserID)
+		// если регистрация — верифицируем email
+		if confirmation.Type == "register" && !user.EmailVerified {
+			if err := tx.Model(&models.User{}).Where("id = ?", user.ID).Update("email_verified", true).Error; err != nil {
+				return err
+			}
+		}
+
+		// помечаем код как использованный
+		if err := s.repo.MarkCodeUsedTx(tx, confirmation.ID); err != nil {
+			return err
+		}
+
+		// выдаем токены
+		accessToken, refreshToken, err = s.issueTokens(user)
+		return err
+	})
+
 	if err != nil {
 		return "", "", err
 	}
 
-	if confirmation.Type == "register" && !user.EmailVerified {
-		if err := s.repo.VerifyEmail(user.ID); err != nil {
-			return "", "", err
-		}
-	}
-
-	if err := s.repo.MarkCodeUsed(confirmation.ID); err != nil {
-		return "", "", err
-	}
-
-	return s.issueTokens(user)
+	return accessToken, refreshToken, nil
 }
 
+// ===================== issueTokens =====================
 func (s *AuthService) issueTokens(user *models.User) (string, string, error) {
 	access, err := auth.GenerateToken(user.ID.String(), string(user.Role), user.Name, user.CartID.String())
 	if err != nil {
@@ -280,11 +266,9 @@ func (s *AuthService) issueTokens(user *models.User) (string, string, error) {
 	return access, refreshToken.Token, nil
 }
 
+// ===================== RateLimit =====================
 func (s *AuthService) checkEmailRateLimit(email string) error {
-	count, err := s.repo.CountCodesByEmail(
-		email,
-		time.Now().Add(-1*time.Hour),
-	)
+	count, err := s.repo.CountCodesByEmail(email, time.Now().Add(-1*time.Hour))
 	if err != nil {
 		return err
 	}

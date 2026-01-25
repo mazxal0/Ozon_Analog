@@ -16,8 +16,9 @@ type EmailConfirmation struct {
 	Type      string `gorm:"size:16;not null;index"` // login | register
 	Code      string `gorm:"size:6;not null"`
 	ExpiresAt time.Time
-	Used      bool
+	Used      bool `gorm:"not null;default:false;index"`
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (e *EmailConfirmation) BeforeSave(tx *gorm.DB) error {
