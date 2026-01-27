@@ -13,6 +13,10 @@ type ProcessorRepository struct {
 	db *gorm.DB
 }
 
+func (r *ProcessorRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
 func NewProcessorRepository() *ProcessorRepository {
 	return &ProcessorRepository{db: common.DB}
 }

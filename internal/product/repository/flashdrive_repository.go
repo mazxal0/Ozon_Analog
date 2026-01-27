@@ -18,6 +18,10 @@ func NewFlashDriveRepository() *FlashDriveRepository {
 	return &FlashDriveRepository{db: common.DB}
 }
 
+func (r *FlashDriveRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
 func (r *FlashDriveRepository) CreateFlashDrive(fd *models.FlashDrive) error {
 	return r.db.Create(&fd).Error
 }

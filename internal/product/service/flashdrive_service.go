@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Market_backend/internal/common/types"
 	"Market_backend/internal/common/utils"
 	"Market_backend/internal/product/dto"
 	"Market_backend/internal/product/repository"
@@ -9,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"io"
 	"os"
 )
@@ -148,7 +150,28 @@ func (s *FlashDriveService) GetFlashDriveById(id uuid.UUID) (*dto.FlashDriveWith
 //
 
 func (s *FlashDriveService) DeleteFlashDrive(id uuid.UUID) error {
-	return s.repo.DeleteFlashDrive(id)
+	return s.repo.GetDB().Transaction(func(tx *gorm.DB) error {
+
+		// 1. Удаляем FlashDrive из всех корзин
+		if err := tx.
+			Where(
+				"product_id = ? AND product_type = ?",
+				id,
+				types.FlashDriver,
+			).
+			Delete(&models.CartItem{}).Error; err != nil {
+			return err
+		}
+
+		// 2. Удаляем сам FlashDrive
+		if err := tx.
+			Where("id = ?", id).
+			Delete(&models.FlashDrive{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 //

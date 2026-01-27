@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Market_backend/internal/common/types"
 	"Market_backend/internal/common/utils"
 	"Market_backend/internal/product/dto"
 	"Market_backend/internal/product/repository"
@@ -9,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"io"
 	"os"
 )
@@ -112,7 +114,24 @@ func (s *ProcessorService) CreateProcessor(dto dto.ProcessorCreateDTO) (*models.
 }
 
 func (s *ProcessorService) DeleteProcessor(procID uuid.UUID) error {
-	return s.procRepo.DeleteProcessor(procID)
+	return s.procRepo.GetDB().Transaction(func(tx *gorm.DB) error {
+
+		// 1. Удаляем процессор из всех корзин
+		if err := tx.
+			Where("product_id = ? AND product_type = ?", procID, types.Processor).
+			Delete(&models.CartItem{}).Error; err != nil {
+			return err
+		}
+
+		// 2. Удаляем сам процессор
+		if err := tx.
+			Where("id = ?", procID).
+			Delete(&models.Processor{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (s *ProcessorService) GetAllProcessors(filter dto.ProcessorFilterDTO) ([]dto.AllProcessorsResponseDTO, error) {
