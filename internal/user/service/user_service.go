@@ -2,10 +2,10 @@ package service
 
 import (
 	"Market_backend/internal/auth"
+	"Market_backend/internal/common/utils"
 	"Market_backend/internal/user/dto"
 	"Market_backend/internal/user/repository"
 	"Market_backend/models"
-
 	"github.com/google/uuid"
 )
 
@@ -26,6 +26,15 @@ func (s *UserService) GetMe(id uuid.UUID) (*models.User, error) {
 }
 
 func (s *UserService) ChangeMe(userChange dto.UserChange, id uuid.UUID) (string, error) {
+
+	passwordHash, err := utils.HashPassword(userChange.Password)
+
+	if err != nil {
+		return "", err
+	}
+
+	userChange.PasswordHash = passwordHash
+
 	user, err := s.repo.ChangeUser(id, userChange)
 	if err != nil {
 		return "", err
