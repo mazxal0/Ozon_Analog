@@ -270,3 +270,14 @@ func (r *ProcessorRepository) UpdateStock(processorID uuid.UUID, newStock int) e
 	}
 	return nil
 }
+
+func (r *ProcessorRepository) DeleteImageByID(imageID uuid.UUID) error {
+	res := r.db.Where("id = ?", imageID).Delete(&models.Image{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}

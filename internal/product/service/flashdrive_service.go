@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 	"io"
 	"os"
+	"strings"
 )
 
 type FlashDriveService struct {
@@ -179,33 +180,75 @@ func (s *FlashDriveService) DeleteFlashDrive(id uuid.UUID) error {
 //
 
 func (s *FlashDriveService) UpdateFlashDrive(id uuid.UUID, upd dto.FlashDriveUpdateDTO) error {
-	// обновляем поля в БД через репозиторий
+	ctx := context.Background()
+
+	// 1) обновляем поля в БД
 	if err := s.repo.Update(id, upd); err != nil {
 		return err
 	}
 
-	// загружаем новые изображения
+	// helper: URL -> objectName (после /{bucket}/)
+	objectNameFromURL := func(u string) (string, bool) {
+		marker := "/" + s.storage.Bucket + "/"
+		i := strings.Index(u, marker)
+		if i == -1 {
+			return "", false
+		}
+		obj := u[i+len(marker):]
+		if obj == "" {
+			return "", false
+		}
+		return obj, true
+	}
+
+	// 2) удаляем старые изображения, которых нет в keep_image_urls
+	currentImages, err := s.repo.GetImagesByFlashDriveID(id)
+	if err != nil {
+		return err
+	}
+
+	keepSet := make(map[string]struct{}, len(upd.KeepImageURLs))
+	for _, u := range upd.KeepImageURLs {
+		keepSet[u] = struct{}{}
+	}
+
+	for _, img := range currentImages {
+		if _, ok := keepSet[img.URL]; ok {
+			continue
+		}
+
+		if objName, ok := objectNameFromURL(img.URL); ok {
+			_ = s.storage.Delete(ctx, objName)
+		}
+		_ = s.repo.DeleteImageByID(img.ID)
+	}
+
+	// 3) загружаем новые изображения
 	for _, fileHeader := range upd.ImageFiles {
-		file, err := fileHeader.Open()
+		f, err := fileHeader.Open()
 		if err != nil {
 			continue
 		}
-		defer file.Close()
 
 		tmpFile, err := os.CreateTemp("", "upload-*")
 		if err != nil {
+			_ = f.Close()
 			continue
 		}
-		defer os.Remove(tmpFile.Name())
 
-		if _, err = io.Copy(tmpFile, file); err != nil {
-			tmpFile.Close()
+		if _, err = io.Copy(tmpFile, f); err != nil {
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpFile.Name())
+			_ = f.Close()
 			continue
 		}
-		tmpFile.Close()
+
+		_ = tmpFile.Close()
+		_ = f.Close()
 
 		s3Key := fmt.Sprintf("flashdrives/%s/%s", id, fileHeader.Filename)
-		url, err := s.storage.Upload(context.Background(), s3Key, tmpFile.Name())
+		url, err := s.storage.Upload(ctx, s3Key, tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		if err != nil {
 			continue
 		}
@@ -215,8 +258,7 @@ func (s *FlashDriveService) UpdateFlashDrive(id uuid.UUID, upd dto.FlashDriveUpd
 			FlashDriveID: &id,
 			URL:          url,
 		}
-
-		s.repo.CreateImage(img)
+		_ = s.repo.CreateImage(img)
 	}
 
 	return nil

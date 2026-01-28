@@ -39,5 +39,6 @@ type FlashDriveUpdateDTO struct {
 	WarrantyMonths  int    `json:"warranty_months"`
 	Features        string `json:"features"`
 
-	ImageFiles []*multipart.FileHeader `json:"image_files"`
+	ImageFiles    []*multipart.FileHeader `json:"image_files"`
+	KeepImageURLs []string                `json:"keep_image_urls"`
 }

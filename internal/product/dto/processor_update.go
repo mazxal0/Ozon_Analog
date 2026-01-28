@@ -31,4 +31,5 @@ type ProcUpdate struct {
 	PackageContents    string                  `json:"package_contents"`
 	CountryOfOrigin    string                  `json:"country_of_origin"`
 	Images             []*multipart.FileHeader `json:"images"`
+	KeepImageURLs      []string                `json:"keep_image_urls"`
 }

@@ -50,3 +50,7 @@ func (s *MinioStorage) Upload(ctx context.Context, objectName, filePath string) 
 	// Публичный URL
 	return s.Endpoint + "/" + s.Bucket + "/" + objectName, nil
 }
+
+func (s *MinioStorage) Delete(ctx context.Context, objectName string) error {
+	return s.Client.RemoveObject(ctx, s.Bucket, objectName, minio.RemoveObjectOptions{})
+}

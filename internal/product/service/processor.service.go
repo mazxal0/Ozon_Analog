@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 	"io"
 	"os"
+	"strings"
 )
 
 type ProcessorService struct {
@@ -149,70 +150,84 @@ func (s *ProcessorService) GetProcessorById(procID uuid.UUID) (*dto.ProcessorWit
 	}
 	return totalModel, nil
 }
-
 func (s *ProcessorService) UpdateProcessor(procID uuid.UUID, procDto dto.ProcUpdate) error {
-	// Получаем существующий процессор
-	//processor, err := s.procRepo.GetProcessorById(procID)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//// Обновляем поля
-	//processor.Name = dto.Name
-	//processor.Brand = dto.Brand
-	//processor.RetailPrice = dto.RetailPrice
-	//processor.WholesalePrice = dto.WholesalePrice
-	//processor.WholesaleMinQty = dto.WholesaleMinQty
-	//processor.Stock = dto.Stock
-	//processor.Line = dto.Line
-	//processor.Architecture = dto.Architecture
-	//processor.Socket = dto.Socket
-	//processor.BaseFrequency = dto.BaseFrequency
-	//processor.TurboFrequency = dto.TurboFrequency
-	//processor.Cores = dto.Cores
-	//processor.Threads = dto.Threads
-	//processor.L1Cache = dto.L1Cache
-	//processor.L2Cache = dto.L2Cache
-	//processor.L3Cache = dto.L3Cache
-	//processor.Lithography = dto.Lithography
-	//processor.TDP = dto.TDP
-	//processor.Features = dto.Features
-	//processor.MemoryType = dto.MemoryType
-	//processor.MaxRAM = dto.MaxRAM
-	//processor.MaxRAMFrequency = dto.MaxRAMFrequency
-	//processor.IntegratedGraphics = dto.IntegratedGraphics
-	//processor.GraphicsModel = dto.GraphicsModel
-	//processor.MaxTemperature = dto.MaxTemperature
-	//processor.PackageContents = dto.PackageContents
-	//processor.CountryOfOrigin = dto.CountryOfOrigin
+	ctx := context.Background()
 
-	// Обновляем процессор в БД через репозиторий
+	// 1) Обновляем поля процессора (без картинок)
 	if err := s.procRepo.Update(procID, procDto); err != nil {
 		return err
 	}
 
-	// Если пришли новые изображения (файлы)
+	// helper: из публичного URL -> objectName в MinIO (то, что лежит после /{bucket}/)
+	// пример URL: http://minio:9000/products/processors/<id>/222.jpg
+	objectNameFromURL := func(u string) (string, bool) {
+		marker := "/" + s.storage.Bucket + "/"
+		i := strings.Index(u, marker)
+		if i == -1 {
+			return "", false
+		}
+		obj := u[i+len(marker):]
+		if obj == "" {
+			return "", false
+		}
+		return obj, true
+	}
+
+	// 2) Удаляем старые картинки, которые пользователь убрал (не входят в keep_image_urls)
+	// Если keep_image_urls пустой — удалит все старые (логично, если юзер удалил всё).
+	currentImages, err := s.procRepo.GetImagesByProcessorID(procID)
+	if err != nil {
+		return err
+	}
+
+	keepSet := make(map[string]struct{}, len(procDto.KeepImageURLs))
+	for _, u := range procDto.KeepImageURLs {
+		keepSet[u] = struct{}{}
+	}
+
+	for _, img := range currentImages {
+		if _, ok := keepSet[img.URL]; ok {
+			continue // оставляем
+		}
+
+		// удалить объект из MinIO
+		if objName, ok := objectNameFromURL(img.URL); ok {
+			_ = s.storage.Delete(ctx, objName) // не валим весь апдейт, даже если object уже удалён
+		}
+
+		// удалить запись из БД
+		_ = s.procRepo.DeleteImageByID(img.ID)
+	}
+
+	// 3) Добавляем новые изображения (если пришли)
 	for _, fileHeader := range procDto.Images {
-		file, err := fileHeader.Open()
+		f, err := fileHeader.Open()
 		if err != nil {
 			continue
 		}
-		defer file.Close()
 
 		tmpFile, err := os.CreateTemp("", "upload-*")
 		if err != nil {
+			_ = f.Close()
 			continue
 		}
-		defer os.Remove(tmpFile.Name())
 
-		if _, err := io.Copy(tmpFile, file); err != nil {
-			tmpFile.Close()
+		// копируем в tmp
+		if _, err := io.Copy(tmpFile, f); err != nil {
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpFile.Name())
+			_ = f.Close()
 			continue
 		}
-		tmpFile.Close()
 
+		_ = tmpFile.Close()
+		_ = f.Close()
+
+		// ключ в MinIO (bucket = products)
 		s3Key := fmt.Sprintf("processors/%s/%s", procID, fileHeader.Filename)
-		url, err := s.storage.Upload(context.Background(), s3Key, tmpFile.Name())
+
+		url, err := s.storage.Upload(ctx, s3Key, tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		if err != nil {
 			continue
 		}
@@ -222,7 +237,7 @@ func (s *ProcessorService) UpdateProcessor(procID uuid.UUID, procDto dto.ProcUpd
 			ProcessorID: &procID,
 			URL:         url,
 		}
-		s.procRepo.CreateImage(img)
+		_ = s.procRepo.CreateImage(img)
 	}
 
 	return nil

@@ -4,7 +4,6 @@ import (
 	"Market_backend/internal/common/utils"
 	"Market_backend/internal/product/dto"
 	"Market_backend/internal/product/service"
-	"errors"
 	"mime/multipart"
 	"strconv"
 	"strings"
@@ -174,7 +173,7 @@ func (h *FlashDriveHandler) UpdateFlashDrive(c *fiber.Ctx) error {
 	}
 
 	form, err := c.MultipartForm()
-	if err != nil && errors.Is(err, fiber.ErrUnprocessableEntity) {
+	if err != nil && err != fiber.ErrUnprocessableEntity {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid form"})
 	}
 
@@ -190,6 +189,15 @@ func (h *FlashDriveHandler) UpdateFlashDrive(c *fiber.Ctx) error {
 			}
 		}
 		return ""
+	}
+
+	getValues := func(key string) []string {
+		if form != nil {
+			if vals, ok := form.Value[key]; ok {
+				return vals
+			}
+		}
+		return []string{}
 	}
 
 	dtoFD := dto.FlashDriveUpdateDTO{
@@ -227,11 +235,11 @@ func (h *FlashDriveHandler) UpdateFlashDrive(c *fiber.Ctx) error {
 		WarrantyMonths:  utils.ParseInt(get("warranty_months")),
 		Features:        get("features"),
 
-		ImageFiles: files,
+		KeepImageURLs: getValues("keep_image_urls"), // ✅ ВАЖНО
+		ImageFiles:    files,
 	}
 
-	err = h.service.UpdateFlashDrive(flashID, dtoFD)
-	if err != nil {
+	if err := h.service.UpdateFlashDrive(flashID, dtoFD); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 

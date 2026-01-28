@@ -295,3 +295,14 @@ func (r *FlashDriveRepository) UpdateStock(flashID uuid.UUID, newStock int) erro
 	}
 	return nil
 }
+
+func (r *FlashDriveRepository) DeleteImageByID(imageID uuid.UUID) error {
+	res := r.db.Where("id = ?", imageID).Delete(&models.Image{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}

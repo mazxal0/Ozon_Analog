@@ -178,6 +178,16 @@ func (h *ProcessorHandler) UpdateProcessor(c *fiber.Ctx) error {
 		return ""
 	}
 
+	getValues := func(key string) []string {
+		if form != nil {
+			if vals, ok := form.Value[key]; ok {
+				return vals
+			}
+		}
+		return []string{}
+	}
+	keepImageURLs := getValues("keep_image_urls")
+
 	procDto := dto.ProcUpdate{
 		Name:               getValue("name"),
 		Brand:              getValue("brand"),
@@ -207,7 +217,8 @@ func (h *ProcessorHandler) UpdateProcessor(c *fiber.Ctx) error {
 		PackageContents:    getValue("package_contents"),
 		CountryOfOrigin:    getValue("country_of_origin"),
 		// Можно добавить ImageURLs через JSON, если есть
-		Images: files,
+		Images:        files,
+		KeepImageURLs: keepImageURLs,
 	}
 
 	err = h.service.UpdateProcessor(procID, procDto)
