@@ -107,12 +107,14 @@ func createYooKassaPayment(payment *models.Payment) (string, string, error) {
 	secretKey := os.Getenv("YKASSA_SECRET_KEY")
 	testMode := os.Getenv("YKASSA_TEST_MODE") == "true"
 
+	frontend_url := os.Getenv("FRONTEND_URL")
+
 	reqBody := YooKassaRequest{}
 	reqBody.Amount.Value = fmt.Sprintf("%.2f", payment.Amount)
 	reqBody.Amount.Currency = payment.Currency
 	reqBody.PaymentMethodData.Type = string(payment.Method) // "bank_card" или "sbp"
 	reqBody.Confirmation.Type = "redirect"
-	reqBody.Confirmation.ReturnURL = "http://localhost:3000/profile?tab=orders" // URL возврата
+	reqBody.Confirmation.ReturnURL = frontend_url + "/profile?tab=orders" // URL возврата
 	reqBody.Description = fmt.Sprintf("Order %s", payment.OrderID)
 	reqBody.Metadata = map[string]string{"order_id": payment.OrderID.String()}
 	reqBody.Test = testMode
