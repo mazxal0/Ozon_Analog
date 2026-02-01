@@ -151,11 +151,12 @@ func (h *OrderHandler) GetOrders(c *fiber.Ctx) error {
 		}
 
 		ordersDTO = append(ordersDTO, dto.OrderDTO{
-			ID:        order.ID,
-			CreatedAt: order.CreatedAt,
-			Status:    string(order.Status),
-			Total:     order.Total,
-			Items:     itemsDTO,
+			ID:          order.ID,
+			CreatedAt:   order.CreatedAt,
+			Status:      string(order.Status),
+			OrderNumber: order.OrderNumber,
+			Total:       order.Total,
+			Items:       itemsDTO,
 		})
 	}
 
@@ -172,9 +173,9 @@ func (h *OrderHandler) GetAllOrders(c *fiber.Ctx) error {
 		})
 	}
 
-	response := dto.AllOrdersResponse{}
+	response := dto.AllOrdersAdminResponse{}
 
-	var ordersDTO []dto.OrderDTO
+	var ordersDTO []dto.OrderAdminDTO
 
 	for _, order := range orders {
 		var itemsDTO []dto.OrderItemDTO
@@ -213,20 +214,26 @@ func (h *OrderHandler) GetAllOrders(c *fiber.Ctx) error {
 			})
 		}
 
-		ordersDTO = append(ordersDTO, dto.OrderDTO{
-			ID:        order.ID,
-			Name:      order.User.Name, // нужно чтобы User был preloaded
-			Status:    string(order.Status),
-			Total:     totalSum,
-			CreatedAt: order.CreatedAt,
-			Items:     itemsDTO,
+		ordersDTO = append(ordersDTO, dto.OrderAdminDTO{
+			ID:          order.ID,
+			Name:        order.User.Name, // нужно чтобы User был preloaded
+			Surname:     order.User.Surname,
+			LastName:    order.User.LastName,
+			Number:      order.User.Number,
+			Email:       order.User.Email,
+			Status:      string(order.Status),
+			OrderNumber: order.OrderNumber,
+			Total:       totalSum,
+			CreatedAt:   order.CreatedAt,
+			Items:       itemsDTO,
+			LenItems:    orderItemsCount,
 		})
-
-		response.TotalItems += orderItemsCount
-		response.TotalSum += totalSum
+		if order.Status == types.Completed {
+			response.TotalOrders += 1
+			response.TotalItems += orderItemsCount
+			response.TotalSum += totalSum
+		}
 	}
-
-	response.TotalOrders = len(ordersDTO)
 	response.Orders = ordersDTO
 
 	return c.Status(fiber.StatusOK).JSON(response)
